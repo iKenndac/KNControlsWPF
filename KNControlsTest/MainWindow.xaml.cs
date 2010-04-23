@@ -17,7 +17,7 @@ namespace KNControlsTest {
     /// <summary>
     /// Interaction logic for MainWindow.xaml
     /// </summary>
-    public partial class MainWindow : Window, KNTableView.KNTableViewDataSource {
+    public partial class MainWindow : Window, KNTableView.KNTableViewDataSource, KNTableView.KNTableViewDelegate {
         public MainWindow() {
             InitializeComponent();
 
@@ -25,7 +25,7 @@ namespace KNControlsTest {
 
         }
 
-       
+        private string[] elements = { "a", "b", "c" };
 
         private void DidLoadYay(object sender, EventArgs e) {
 
@@ -33,18 +33,33 @@ namespace KNControlsTest {
                 new KNTableColumn("test", new KNTextCell(), null),
                 new KNTableColumn("test", new KNTextCell(), null) };
 
-            kNTableView1.SelectedRows = new int[] { 5 };
             kNTableView1.DataSource = this;
+            kNTableView1.Delegate = this;
             kNTableView1.ReloadData();
         }
 
 
         public int NumberOfItemsInTableView(KNTableView table) {
-            return 100;
+            return elements.Length;
         }
 
         public object ObjectForRow(KNTableView table, KNTableColumn column, int rowIndex) {
-            return "This is a fairly long string to test";
+            return elements[rowIndex];
+        }
+
+        public bool TableViewShouldSelectRow(KNTableView table, int rowIndex) {
+            return true;
+        }
+
+        public KNTableColumn.SortDirection TableViewWillSortByColumnWithSuggestedSortOrder(KNTableView table, KNTableColumn column, KNTableColumn.SortDirection suggestedNewSortOrder) {
+
+            Array.Sort(elements);
+
+            if (suggestedNewSortOrder == KNTableColumn.SortDirection.Descending) {
+                Array.Reverse(elements);
+            }
+            
+            return suggestedNewSortOrder;
         }
     }
 }

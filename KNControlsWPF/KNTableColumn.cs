@@ -7,14 +7,22 @@ using KNFoundation.KNKVC;
 namespace KNControls {
     public class KNTableColumn : KNActionCellDelegate {
 
+        public const double kResizeAreaWidth = 10.0;
+
         public enum SortPriority {
             Primary = 0,
             Secondary = 1,
             NotUsed = 2
         }
 
+        public enum SortDirection {
+            Ascending = 0,
+            Descending = 1
+        }
+
         public interface KNTableColumnDelegate {
             void ActionCellPerformedAction(KNActionCell cell, KNTableColumn column);
+            void HeaderWasClicked(KNTableColumn column);
         }
 
         private KNCell cell;
@@ -26,6 +34,7 @@ namespace KNControls {
         private int minSize;
         private int maxSize;
         private SortPriority sortPriority;
+        private SortDirection sortDirection;        
 
         private KNTableColumnDelegate del;
 
@@ -35,12 +44,15 @@ namespace KNControls {
 
             cells = new Dictionary<int, KNCell>();
             sortPriority = SortPriority.NotUsed;
+            sortDirection = SortDirection.Ascending;
             cell = new KNTextCell();
             width = 100;
             minSize = 100;
             maxSize = 2000;
             userResizable = true;
             headerCell = new KNHeaderCell();
+            headerCell.Column = this;
+            headerCell.Delegate = this;
             headerCell.ObjectValue = "Column Title";
 
         }
@@ -83,8 +95,18 @@ namespace KNControls {
         }
 
         public void CellPerformedAction(KNActionCell cell) {
-            if (Delegate != null) {
-                Delegate.ActionCellPerformedAction(cell, this);
+
+            if (cell == HeaderCell) {
+
+                if (Delegate != null) {
+                    Delegate.HeaderWasClicked(this);
+                }
+
+            } else {
+
+                if (Delegate != null) {
+                    Delegate.ActionCellPerformedAction(cell, this);
+                }
             }
         }
 
@@ -124,9 +146,11 @@ namespace KNControls {
 
                 if (headerCell != null) {
                     headerCell.Column = null;
+                    headerCell.Delegate = null;
                 }
                 headerCell = value;
                 headerCell.Column = this;
+                headerCell.Delegate = this;
             }
         }
 
@@ -163,6 +187,15 @@ namespace KNControls {
                 this.WillChangeValueForKey("SortingPriority");
                 sortPriority = value;
                 this.DidChangeValueForKey("SortingPriority");
+            }
+        }
+
+        public SortDirection SortingDirection {
+            get { return sortDirection; }
+            set {
+                this.WillChangeValueForKey("SortingDirection");
+                sortDirection = value;
+                this.DidChangeValueForKey("SortingDirection");
             }
         }
 
