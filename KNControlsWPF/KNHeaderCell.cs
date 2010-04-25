@@ -208,15 +208,16 @@ namespace KNControls {
 
         public override bool MouseUpInCell(Point relativePoint, Rect relativeFrame) {
 
-            if (mouseDownForHeaderPress) {
+            if (relativeFrame.Contains(relativePoint)) {
+                if (mouseDownForHeaderPress) {
 
-                // Clicked! Do something...
+                    // Clicked! Do something...
 
-                if (Delegate != null) {
-                    Delegate.CellPerformedAction(this);
+                    if (Delegate != null) {
+                        Delegate.CellPerformedAction(this);
+                    }
                 }
-            }           
-            
+            }
             mouseDownForHeaderPress = false;
             return false;
         }

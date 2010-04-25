@@ -26,10 +26,13 @@ namespace KNControlsTest {
         }
 
         private string[] elements = { "a", "b", "c" };
+        private bool[] bools = { true, false, true };
 
         private void DidLoadYay(object sender, EventArgs e) {
 
-            kNTableView1.Columns = new KNTableColumn[] { new KNTableColumn("test", new KNTextCell(), null),
+            System.Windows.Forms.Application.EnableVisualStyles();
+
+            kNTableView1.Columns = new KNTableColumn[] { new KNTableColumn("bool", new KNCheckboxCell(), null),
                 new KNTableColumn("test", new KNTextCell(), null),
                 new KNTableColumn("test", new KNTextCell(), null) };
 
@@ -44,7 +47,21 @@ namespace KNControlsTest {
         }
 
         public object ObjectForRow(KNTableView table, KNTableColumn column, int rowIndex) {
-            return elements[rowIndex];
+
+            //System.Diagnostics.Debug.WriteLine(rowIndex.ToString());
+
+            if (column.Identifier.Equals("bool")) {
+                return bools[rowIndex];
+            } else {
+                return elements[rowIndex];
+            }
+        }
+
+        public void CellPerformedAction(KNTableView view, KNTableColumn column, KNActionCell cell, int rowIndex) {
+
+            if (column.Identifier.Equals("bool")) {
+                bools[rowIndex] = (bool)cell.ObjectValue;
+            }
         }
 
         public bool TableViewShouldSelectRow(KNTableView table, int rowIndex) {

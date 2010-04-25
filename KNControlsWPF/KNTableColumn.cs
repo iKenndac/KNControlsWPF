@@ -75,7 +75,7 @@ namespace KNControls {
                     ((KNActionCell)newCell).Delegate = this;
                 }
 
-                cells.Add(row, cell);
+                cells.Add(row, newCell);
             }
             return cells[row];
         }

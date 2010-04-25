@@ -53,6 +53,7 @@ namespace KNControls {
         public interface KNTableViewDataSource {
             int NumberOfItemsInTableView(KNTableView table);
             object ObjectForRow(KNTableView table, KNTableColumn column, int rowIndex);
+            void CellPerformedAction(KNTableView view, KNTableColumn column, KNActionCell cell, int rowIndex);
         }
 
         public interface KNTableViewDelegate {
@@ -82,7 +83,12 @@ namespace KNControls {
         }
 
         public void ActionCellPerformedAction(KNActionCell cell, KNTableColumn column) {
-            throw new NotImplementedException();
+
+            if (DataSource != null) {
+                DataSource.CellPerformedAction(this, column, cell, column.RowForCell(cell));
+                ReloadData();
+            }
+
         }
 
         public void HeaderWasClicked(KNTableColumn column) {
@@ -434,8 +440,7 @@ namespace KNControls {
                 // User clicked a cell that the mouse hasn't moved over yet. Is this possible? Do we care?
                 //throw new Exception("Inconsistent state");
             }
-
-            MessageBox.Show(cell.ObjectValue.ToString());
+           
             if (cell != null && typeof(KNActionCell).IsAssignableFrom(cell.GetType())) {
 
                 Rect mouseEventsCellRelativeFrame = new Rect(0, 0, mouseEventsCellAbsoluteFrame.Width, mouseEventsCellAbsoluteFrame.Height);
@@ -769,9 +774,9 @@ namespace KNControls {
 
                             drawingContext.PushClip(new RectangleGeometry(columnRect));
                             cell.RenderInFrame(drawingContext, columnRect);
+                                
                             drawingContext.Pop();
                         }
-
                     }
 
                 }
