@@ -69,6 +69,7 @@
     <Compile Include="KNCheckboxCell.cs" />
     <Compile Include="KNHeaderCell.cs" />
     <Compile Include="KNImageCell.cs" />
+    <Compile Include="KNProgressWheelCell.cs" />
     <Compile Include="KNTableColumn.cs" />
     <Compile Include="KNTableView.cs" />
     <Compile Include="KNTextCell.cs" />

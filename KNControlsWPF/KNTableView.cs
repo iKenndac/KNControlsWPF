@@ -75,7 +75,8 @@ namespace KNControls {
         }
 
         public void UpdateCell(KNCell cell) {
-            throw new NotImplementedException();
+            InvalidateVisual();
+            //TODO: Make this more effecient.
         }
 
         public KNCell.KNCellContainer Control() {
