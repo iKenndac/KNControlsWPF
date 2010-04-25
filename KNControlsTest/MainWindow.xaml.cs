@@ -12,6 +12,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 using KNControls;
+using System.Reflection;
 
 namespace KNControlsTest {
     /// <summary>
@@ -27,15 +28,25 @@ namespace KNControlsTest {
 
         private string[] elements = { "a", "b", "c" };
         private bool[] bools = { true, false, true };
+        private BitmapImage image;
 
         private void DidLoadYay(object sender, EventArgs e) {
 
             System.Windows.Forms.Application.EnableVisualStyles();
 
-            kNTableView1.Columns = new KNTableColumn[] { new KNTableColumn("bool", new KNCheckboxCell(), null),
+            image = new BitmapImage();
+            image.BeginInit();
+            image.StreamSource = Assembly.GetExecutingAssembly().GetManifestResourceStream("KNControlsTest.iPodGeneration1.png");
+            image.EndInit();
+
+            kNTableView1.Columns = new KNTableColumn[] { new KNTableColumn("image", new KNImageCell(), null),
+                new KNTableColumn("bool", new KNCheckboxCell(), null),
                 new KNTableColumn("test", new KNTextCell(), null),
                 new KNTableColumn("test", new KNTextCell(), null) };
 
+            kNTableView1.Columns[0].MinimumWidth = 10;
+
+            kNTableView1.RowHeight = 40.0;
             kNTableView1.DataSource = this;
             kNTableView1.Delegate = this;
             kNTableView1.ReloadData();
@@ -50,7 +61,9 @@ namespace KNControlsTest {
 
             //System.Diagnostics.Debug.WriteLine(rowIndex.ToString());
 
-            if (column.Identifier.Equals("bool")) {
+            if (column.Identifier.Equals("image")) {
+                return image;
+            } else if (column.Identifier.Equals("bool")) {
                 return bools[rowIndex];
             } else {
                 return elements[rowIndex];

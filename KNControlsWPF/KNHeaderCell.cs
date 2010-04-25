@@ -95,7 +95,11 @@ namespace KNControls {
                 11.75,
                 new SolidColorBrush(textColor));
 
-            text.MaxTextWidth = frame.Width - padding * 2;
+            if (frame.Width >= padding * 2) {
+                text.MaxTextWidth = frame.Width - padding * 2;
+            } else {
+                text.MaxTextWidth = 0;
+            }
             text.MaxTextHeight = frame.Height;
 
             
