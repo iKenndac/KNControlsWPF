@@ -39,10 +39,11 @@ namespace KNControlsTest {
             image.StreamSource = Assembly.GetExecutingAssembly().GetManifestResourceStream("KNControlsTest.iPodGeneration1.png");
             image.EndInit();
 
-            kNTableView1.Columns = new KNTableColumn[] { new KNTableColumn("image", new KNProgressWheelCell(), null),
-                new KNTableColumn("bool", new KNCheckboxCell(), null),
-                new KNTableColumn("test", new KNTextCell(), null),
-                new KNTableColumn("test", new KNTextCell(), null) };
+            kNTableView1.Columns = new KNTableColumn[] { new KNTableColumn("progress", "Progress Wheel", new KNProgressWheelCell(), null),
+                new KNTableColumn("image", "Image",new KNImageCell(), null),
+                new KNTableColumn("bool", "Checkbox",new KNCheckboxCell(), null),
+                new KNTableColumn("test", "Text",new KNTextCell(), null),
+                new KNTableColumn("test", "Text",new KNTextCell(), null) };
 
             kNTableView1.Columns[0].MinimumWidth = 10;
 

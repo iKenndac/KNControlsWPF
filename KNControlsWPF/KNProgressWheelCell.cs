@@ -30,11 +30,10 @@ namespace KNControls {
 
         public KNProgressWheelCell() {
 
-            timer = new DispatcherTimer();
+            timer = new DispatcherTimer(DispatcherPriority.Send);
             timer.Interval = kTickDuration;
             timer.Tick += TimerTicked;
             timer.Start();
-
         }
 
         private void TimerTicked(object sender, EventArgs e) {

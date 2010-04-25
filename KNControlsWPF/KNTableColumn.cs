@@ -57,12 +57,13 @@ namespace KNControls {
 
         }
 
-        public KNTableColumn(string anIdentifier, KNCell aDataCell, KNTableColumnDelegate aDelegate)
+        public KNTableColumn(string anIdentifier, string aTitle, KNCell aDataCell, KNTableColumnDelegate aDelegate)
             : this() {
 
                 identifier = anIdentifier;
                 cell = aDataCell;
                 del = aDelegate;
+                headerCell.ObjectValue = aTitle;
         }
 
         public KNCell CellForRow(int row) {

@@ -338,6 +338,8 @@ namespace KNControls {
 
             // Haha, swallow. *High five*
 
+            e.Handled = true;
+
             Point mouseLocationInControl = e.GetPosition(this);
             lastMouseDownPoint = mouseLocationInControl;
 
@@ -464,8 +466,10 @@ namespace KNControls {
             if (e.LeftButton == MouseButtonState.Released && e.RightButton == MouseButtonState.Released) {
                 // Just movin' around
                 MouseMoved(e);
+                e.Handled = true;
             } else if (e.LeftButton == MouseButtonState.Pressed) {
                 MouseDragged(e);
+                e.Handled = true;
             }
         }
 
@@ -504,7 +508,7 @@ namespace KNControls {
 
             // Action and reset selectedRowIfNoDrag
             // Reset mouseEventsCell
-
+            e.Handled = true;
             Point mouseLocationInControl = e.GetPosition(this);
 
             if (mouseEventsCell != null && mouseEventsCellSwallowedEvents) {

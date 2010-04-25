@@ -42,9 +42,35 @@ namespace KNControls {
     ///     <MyNamespace:CustomControl1/>
     ///
     /// </summary>
-    public class CustomControl1 : Control {
-        static CustomControl1() {
-            DefaultStyleKeyProperty.OverrideMetadata(typeof(CustomControl1), new FrameworkPropertyMetadata(typeof(CustomControl1)));
+    public class KNProgressWheel : Control, KNCell.KNCellContainer {
+        static KNProgressWheel() {
+            DefaultStyleKeyProperty.OverrideMetadata(typeof(KNProgressWheel), new FrameworkPropertyMetadata(typeof(KNProgressWheel)));
+        }
+
+        KNProgressWheelCell cell;
+
+        public KNProgressWheel() {
+
+            cell = new KNProgressWheelCell();
+            cell.ParentControl = this;
+        }
+
+        protected override void OnRender(DrawingContext drawingContext) {
+            cell.RenderInFrame(drawingContext, 
+                new Rect(0,0, this.ActualWidth, this.ActualHeight));
+        }
+
+        ControlSize ControlSize {
+            get { return cell.IndicatorSize; }
+            set { cell.IndicatorSize = value; }
+        }
+
+        public void UpdateCell(KNCell cell) {
+            InvalidateVisual();
+        }
+
+        public KNCell.KNCellContainer Control() {
+            return this;
         }
     }
 }
