@@ -24,7 +24,6 @@ namespace KNControls {
             TextColor = Colors.Black;
             HighlightedTextColor = Colors.Black;
 
-
             this.AddObserverToKeyPathWithOptions(this, "TextFont", 0, null);
             this.AddObserverToKeyPathWithOptions(this, "TextAlignment", 0, null);
             this.AddObserverToKeyPathWithOptions(this, "HorizontalPadding", 0, null);
@@ -153,7 +152,5 @@ namespace KNControls {
                 }
             }
         }
-
-        
     }
 }

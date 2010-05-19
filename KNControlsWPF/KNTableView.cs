@@ -323,6 +323,227 @@ namespace KNControls {
 
         }
 
+        protected override void OnKeyDown(KeyEventArgs e) {
+            base.OnKeyDown(e);
+
+            if (e.Key == Key.Up) {
+                SelectUpOneRow((e.KeyboardDevice.Modifiers & ModifierKeys.Shift) != 0);
+            }
+
+            if (e.Key == Key.Down) {
+                SelectDownOneRow((e.KeyboardDevice.Modifiers & ModifierKeys.Shift) != 0);
+            }
+
+        }
+
+        public void SelectUpOneRow(bool extendSelection) {
+
+            if (!AllowMultipleSelection) {
+                extendSelection = false;
+            }
+
+            if (DataSource != null) {
+
+                int lastRow = DataSource.NumberOfItemsInTableView(this) - 1;
+                int minRow = lastRow + 1;
+                int maxRow = -1;
+
+                foreach (int index in SelectedRows) {
+
+                    if (index < minRow) {
+                        minRow = index;
+                    }
+
+                    if (index > maxRow) {
+                        maxRow = index;
+                    }
+                }
+
+                if (extendSelection && SelectedRows.Count > 0) {
+
+                    // If the hinged row is before or equal MaxRow,
+                    // Our target is maxRow - 1. Otherwise, it's minRow - 1.
+
+                    int newMinRow = -1;
+                    int newMaxRow = -1;
+
+                    if (hingedRow < maxRow) {
+                        newMaxRow = maxRow - 1;
+                        newMinRow = minRow;
+                    } else {
+                        newMaxRow = maxRow;
+                        newMinRow = minRow - 1;
+                    }
+
+                    if (newMaxRow > lastRow) {
+                        newMaxRow = lastRow;
+                    }
+
+                    if (newMinRow < 0) {
+                        newMinRow = 0;
+                    }
+
+                    ArrayList newSelection = new ArrayList();
+
+                    for (int row = newMinRow; row <= newMaxRow; row++) {
+                        if (Delegate != null) {
+                            if (Delegate.TableViewShouldSelectRow(this, row)) {
+                                newSelection.Add(row);
+                            }
+                        } else {
+                            newSelection.Add(row);
+                        }
+                    }
+
+                    SelectedRows = newSelection;
+                    EnsureRowIsVisible(newMinRow);
+
+                } else {
+
+                    // Our target is minRow - 1
+
+                    int targetRow = minRow - 1;
+                    if (targetRow < 0) {
+                        targetRow = 0;
+                    }
+
+                    while (targetRow > -1) {
+
+                        if (Delegate != null) {
+                            if (Delegate.TableViewShouldSelectRow(this, targetRow)) {
+                                ArrayList newSelection = new ArrayList();
+                                newSelection.Add(targetRow);
+                                hingedRow = targetRow;
+                                SelectedRows = newSelection;
+                                EnsureRowIsVisible(targetRow);
+                                break;
+                            }
+                        } else {
+                            ArrayList newSelection = new ArrayList();
+                            newSelection.Add(targetRow);
+                            hingedRow = targetRow;
+                            SelectedRows = newSelection;
+                            EnsureRowIsVisible(targetRow);
+                            break;
+                        }
+
+                        targetRow--;
+                    }
+                }
+            }
+        }
+
+        public void SelectDownOneRow(bool extendSelection) {
+
+            if (!AllowMultipleSelection) {
+                extendSelection = false;
+            }
+
+            if (DataSource != null) {
+
+                int lastRow = DataSource.NumberOfItemsInTableView(this) - 1;
+                int minRow = lastRow;
+                int maxRow = -1;
+
+                foreach (int index in SelectedRows) {
+
+                    if (index < minRow) {
+                        minRow = index;
+                    }
+
+                    if (index > maxRow) {
+                        maxRow = index;
+                    }
+                }
+
+                if (extendSelection && SelectedRows.Count > 0) {
+
+                    // If the hinged row is before or equal MaxRow,
+                    // Our target is maxRow + 1. Otherwise, it's minRow + 1.
+
+                    int newMinRow = -1;
+                    int newMaxRow = -1;
+
+                    if (hingedRow > minRow) {
+                        newMaxRow = maxRow;
+                        newMinRow = minRow + 1;
+                    } else {
+                        newMaxRow = maxRow + 1;
+                        newMinRow = minRow;
+                    }
+
+                    if (newMaxRow > lastRow) {
+                        newMaxRow = lastRow;
+                    }
+
+                    if (newMinRow < 0) {
+                        newMinRow = 0;
+                    }
+
+                    ArrayList newSelection = new ArrayList();
+
+                    for (int row = newMinRow; row <= newMaxRow; row++) {
+                        if (Delegate != null) {
+                            if (Delegate.TableViewShouldSelectRow(this, row)) {
+                                newSelection.Add(row);
+                            }
+                        } else {
+                            newSelection.Add(row);
+                        }
+                    }
+
+                    SelectedRows = newSelection;
+                    EnsureRowIsVisible(newMinRow);
+
+                } else {
+
+                    // Our target is maxRow + 1
+
+                    int targetRow = maxRow + 1;
+                    if (targetRow > lastRow) {
+                        targetRow = lastRow;
+                    }
+
+                    while (targetRow <= lastRow) {
+
+                        if (Delegate != null) {
+                            if (Delegate.TableViewShouldSelectRow(this, targetRow)) {
+                                ArrayList newSelection = new ArrayList();
+                                newSelection.Add(targetRow);
+                                hingedRow = targetRow;
+                                SelectedRows = newSelection;
+                                EnsureRowIsVisible(targetRow);
+                                break;
+                            }
+                        } else {
+                            ArrayList newSelection = new ArrayList();
+                            newSelection.Add(targetRow);
+                            hingedRow = targetRow;
+                            SelectedRows = newSelection;
+                            EnsureRowIsVisible(targetRow);
+                            break;
+                        }
+
+                        targetRow++;
+                    }
+                }
+            }
+        }
+
+        public void EnsureRowIsVisible(int row) {
+
+            double yOffset = row * RowHeight;
+
+            if (verticalScrollbar.Value > yOffset) {
+                verticalScrollbar.Value = yOffset;
+            }
+
+            if ((verticalScrollbar.Value + verticalScrollbar.LargeChange) < (yOffset + RowHeight)) {
+                verticalScrollbar.Value = yOffset + RowHeight - verticalScrollbar.LargeChange;
+            }
+
+        }
+
         KNActionCell mouseEventsCell;
         Rect mouseEventsCellAbsoluteFrame;
         bool mouseEventsCellSwallowedEvents;
@@ -339,6 +560,7 @@ namespace KNControls {
             // Haha, swallow. *High five*
 
             e.Handled = true;
+            this.Focus();
 
             Point mouseLocationInControl = e.GetPosition(this);
             lastMouseDownPoint = mouseLocationInControl;

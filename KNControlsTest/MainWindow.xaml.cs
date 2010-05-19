@@ -26,8 +26,8 @@ namespace KNControlsTest {
 
         }
 
-        private string[] elements = { "a", "b", "c" };
-        private bool[] bools = { true, false, true };
+        private string[] elements = { "a", "b", "c", "a", "b", "c", "a", "b", "c", "a", "b", "c" };
+        private bool[] bools = { true, false, true, true, false, true, true, false, true, true, false, true };
         private BitmapImage image;
 
         private void DidLoadYay(object sender, EventArgs e) {
@@ -51,6 +51,8 @@ namespace KNControlsTest {
             kNTableView1.DataSource = this;
             kNTableView1.Delegate = this;
             kNTableView1.ReloadData();
+
+            kNTableView1.Focus();
         }
 
 
