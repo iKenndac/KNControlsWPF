@@ -334,6 +334,24 @@ namespace KNControls {
                 SelectDownOneRow((e.KeyboardDevice.Modifiers & ModifierKeys.Shift) != 0);
             }
 
+            if (e.Key == Key.Home) {
+                EnsureRowIsVisible(0);
+            }
+
+            if (e.Key == Key.End) {
+                if (DataSource != null) {
+                    EnsureRowIsVisible(DataSource.NumberOfItemsInTableView(this) - 1);
+                }
+            }
+
+            if (e.Key == Key.PageUp) {
+                verticalScrollbar.Value -= verticalScrollbar.LargeChange;
+            }
+
+            if (e.Key == Key.PageDown) {
+                verticalScrollbar.Value += verticalScrollbar.LargeChange;
+            }
+
         }
 
         public void SelectUpOneRow(bool extendSelection) {
