@@ -59,7 +59,7 @@ namespace KNControls {
         public interface KNTableViewDelegate {
             bool TableViewShouldSelectRow(KNTableView table, int rowIndex);
             KNTableColumn.SortDirection TableViewWillSortByColumnWithSuggestedSortOrder(KNTableView table, KNTableColumn column, KNTableColumn.SortDirection suggestedNewSortOrder);
-
+            bool TableViewDelegateShouldBeginDragOperationWithObjectsAtIndexes(KNTableView table, ArrayList rowIndexes);
         }
 
         public enum SelectionStyle {
@@ -76,7 +76,7 @@ namespace KNControls {
 
         public void UpdateCell(KNCell cell) {
             InvalidateVisual();
-            //TODO: Make this more effecient.
+            //TODO: Make this more efficient.
         }
 
         public KNCell.KNCellContainer Control() {
@@ -579,6 +579,7 @@ namespace KNControls {
 
             e.Handled = true;
             this.Focus();
+            dragDecision = MouseDragDecision.NoDecisionMade;
 
             Point mouseLocationInControl = e.GetPosition(this);
             lastMouseDownPoint = mouseLocationInControl;
@@ -596,7 +597,7 @@ namespace KNControls {
                         } else if (SelectedRows.Contains(row)) {
 
                             // In this case, the user either wants to select the single row 
-                            // OR drag them. Be smart. 
+                            // OR drag them. Be smart later. 
 
                             selectedRowIfNoDrag = row;
 
@@ -713,6 +714,14 @@ namespace KNControls {
             }
         }
 
+        private enum MouseDragDecision {
+            NoDecisionMade = 0,
+            SelectionDecisionMade = 1,
+            DragDecisionMade = 2
+        }
+
+        private MouseDragDecision dragDecision = MouseDragDecision.NoDecisionMade;
+
         private void MouseDragged(MouseEventArgs e) {
 
             // If the mouse moves over x pixels from the start point
@@ -738,10 +747,82 @@ namespace KNControls {
                 // We should start a drag. If The delegate allows it, do a proper OS drag. 
                 // If not, select some rows.
 
-                // TODO: This
+                if (contentArea.Contains(mouseLocationInControl)) {
 
+                    if (dragDecision == MouseDragDecision.NoDecisionMade) {
+
+                        dragDecision = MouseDragDecision.SelectionDecisionMade;
+
+                        if (Delegate != null) {
+
+                            // Before asking the delegate, figure out if the drag is up/down
+                            // before asking. If up/down, select anyway.
+
+                            double verticalMotion = mouseLocationInControl.Y - lastMouseDownPoint.Y;
+                            double horizontalMotion = mouseLocationInControl.X - lastMouseDownPoint.X;
+
+                            if (verticalMotion < 0.0) {
+                                verticalMotion = 0.0 - verticalMotion;
+                            }
+
+                            if (horizontalMotion < 0.0) {
+                                horizontalMotion = 0.0 - horizontalMotion;
+                            }
+
+                            if (horizontalMotion > verticalMotion) {
+                                if (Delegate.TableViewDelegateShouldBeginDragOperationWithObjectsAtIndexes(this, SelectedRows)) {
+                                    dragDecision = MouseDragDecision.DragDecisionMade;
+                                    
+                                }
+                            }
+                        }
+                    }
+
+                    if (dragDecision == MouseDragDecision.SelectionDecisionMade) {
+
+                        int maxAllowableRow = 0;
+                        if (DataSource != null) {
+                            maxAllowableRow = DataSource.NumberOfItemsInTableView(this);
+                        }
+
+                        int row = RowAtAbsoluteOffset(mouseLocationInControl.Y);
+
+                        int minRow = -1;
+                        int maxRow = -1;
+
+                        if (hingedRow < row) {
+                            minRow = hingedRow;
+                            maxRow = row;
+                        } else {
+                            minRow = row;
+                            maxRow = hingedRow;
+                        }
+
+                        if (minRow < 0) {
+                            minRow = 0;
+                        }
+
+                        if (maxRow > maxAllowableRow) {
+                            maxRow = maxAllowableRow;
+                        }
+
+                        ArrayList newSelection = new ArrayList();
+
+                        for (int thisRow = minRow; thisRow <= maxRow; thisRow++) {
+
+                            if (Delegate != null) {
+                                if (Delegate.TableViewShouldSelectRow(this, thisRow)) {
+                                    newSelection.Add(thisRow);
+                                }
+                            } else {
+                                newSelection.Add(thisRow);
+                            }
+                        }
+
+                        SelectedRows = newSelection;
+                    }
+                }   
             }
-
         }
 
         protected override void OnMouseUp(MouseButtonEventArgs e) {
@@ -750,6 +831,7 @@ namespace KNControls {
             // Reset mouseEventsCell
             e.Handled = true;
             Point mouseLocationInControl = e.GetPosition(this);
+            dragDecision = MouseDragDecision.NoDecisionMade;
 
             if (mouseEventsCell != null && mouseEventsCellSwallowedEvents) {
 

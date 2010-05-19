@@ -94,5 +94,14 @@ namespace KNControlsTest {
             
             return suggestedNewSortOrder;
         }
+
+
+        public bool TableViewDelegateShouldBeginDragOperationWithObjectsAtIndexes(KNTableView table, System.Collections.ArrayList rowIndexes) {
+            //MessageBox.Show("Drag");
+
+            DragDrop.DoDragDrop(table, "test", DragDropEffects.Copy);
+
+            return true;
+        }
     }
 }
