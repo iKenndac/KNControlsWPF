@@ -764,14 +764,16 @@ namespace KNControls {
 
                     if (dragDecision == MouseDragDecision.NoDecisionMade) {
 
-                        dragDecision = MouseDragDecision.SelectionDecisionMade;
+                        if (AllowMultipleSelection) {
+                            dragDecision = MouseDragDecision.SelectionDecisionMade;
+                        }
 
                         if (Delegate != null) {
 
                             // Before asking the delegate, figure out if the drag is up/down
                             // before asking. If up/down, select anyway.
 
-                            if (horizontalMotion > verticalMotion) {
+                            if ((horizontalMotion > verticalMotion) || !AllowMultipleSelection) {
                                 if (Delegate.TableViewDelegateShouldBeginDragOperationWithObjectsAtIndexes(this, SelectedRows)) {
                                     dragDecision = MouseDragDecision.DragDecisionMade;
                                     selectedRowIfNoDrag = -1;

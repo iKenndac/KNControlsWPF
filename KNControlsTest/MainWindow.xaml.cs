@@ -46,7 +46,7 @@ namespace KNControlsTest {
                 new KNTableColumn("test", "Text",new KNTextCell(), null) };
 
             kNTableView1.Columns[0].MinimumWidth = 10;
-
+            kNTableView1.AllowMultipleSelection = false;
             kNTableView1.RowHeight = 40.0;
             kNTableView1.DataSource = this;
             kNTableView1.Delegate = this;
