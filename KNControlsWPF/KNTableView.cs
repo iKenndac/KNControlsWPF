@@ -715,9 +715,9 @@ namespace KNControls {
         }
 
         private enum MouseDragDecision {
-            NoDecisionMade = 0,
-            SelectionDecisionMade = 1,
-            DragDecisionMade = 2
+            NoDecisionMade,
+            SelectionDecisionMade,
+            DragDecisionMade
         }
 
         private MouseDragDecision dragDecision = MouseDragDecision.NoDecisionMade;
@@ -743,11 +743,24 @@ namespace KNControls {
                 InvalidateVisual();
 
             } else {
-                
+
                 // We should start a drag. If The delegate allows it, do a proper OS drag. 
                 // If not, select some rows.
 
-                if (contentArea.Contains(mouseLocationInControl)) {
+                double verticalMotion = mouseLocationInControl.Y - lastMouseDownPoint.Y;
+                double horizontalMotion = mouseLocationInControl.X - lastMouseDownPoint.X;
+
+                if (verticalMotion < 0.0) {
+                    verticalMotion = 0.0 - verticalMotion;
+                }
+
+                if (horizontalMotion < 0.0) {
+                    horizontalMotion = 0.0 - horizontalMotion;
+                }
+
+                if (contentArea.Contains(mouseLocationInControl) &&
+                    (verticalMotion > SystemParameters.MinimumVerticalDragDistance ||
+                    horizontalMotion > SystemParameters.MinimumHorizontalDragDistance)) {
 
                     if (dragDecision == MouseDragDecision.NoDecisionMade) {
 
@@ -758,21 +771,10 @@ namespace KNControls {
                             // Before asking the delegate, figure out if the drag is up/down
                             // before asking. If up/down, select anyway.
 
-                            double verticalMotion = mouseLocationInControl.Y - lastMouseDownPoint.Y;
-                            double horizontalMotion = mouseLocationInControl.X - lastMouseDownPoint.X;
-
-                            if (verticalMotion < 0.0) {
-                                verticalMotion = 0.0 - verticalMotion;
-                            }
-
-                            if (horizontalMotion < 0.0) {
-                                horizontalMotion = 0.0 - horizontalMotion;
-                            }
-
                             if (horizontalMotion > verticalMotion) {
                                 if (Delegate.TableViewDelegateShouldBeginDragOperationWithObjectsAtIndexes(this, SelectedRows)) {
                                     dragDecision = MouseDragDecision.DragDecisionMade;
-                                    
+                                    selectedRowIfNoDrag = -1;
                                 }
                             }
                         }
@@ -786,6 +788,10 @@ namespace KNControls {
                         }
 
                         int row = RowAtAbsoluteOffset(mouseLocationInControl.Y);
+                        if (selectedRowIfNoDrag > -1 && selectedRowIfNoDrag <= maxAllowableRow) {
+                            hingedRow = selectedRowIfNoDrag;
+                            selectedRowIfNoDrag = -1;
+                        }
 
                         int minRow = -1;
                         int maxRow = -1;
@@ -821,7 +827,7 @@ namespace KNControls {
 
                         SelectedRows = newSelection;
                     }
-                }   
+                }
             }
         }
 
