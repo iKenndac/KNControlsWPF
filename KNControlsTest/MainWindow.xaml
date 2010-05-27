@@ -2,7 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:MyNamespace="clr-namespace:KNControls;assembly=KNControls"
-        Title="MainWindow" Height="350" Width="531" xmlns:my="clr-namespace:KNControls;assembly=KNControls" Loaded="Window_Loaded">
+        Title="MainWindow" Height="350" Width="531" xmlns:my="clr-namespace:KNControls;assembly=KNControls">
     <Grid>
         <my:KNTabView Name="kNTabView1" Margin="-3,0,-3,-3" />
     </Grid>

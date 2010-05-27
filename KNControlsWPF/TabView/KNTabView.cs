@@ -46,10 +46,7 @@ namespace KNControls {
     ///
     /// </summary>
     public class KNTabView : Canvas, KNKVOObserver {
-        static KNTabView() {
-            DefaultStyleKeyProperty.OverrideMetadata(typeof(KNTabView), new FrameworkPropertyMetadata(typeof(KNTabView)));
-        }
-
+       
         protected static Color kDefaultTintColor = Color.FromRgb(245, 245, 245);
 
         private Border contentCanvas;
@@ -62,8 +59,7 @@ namespace KNControls {
         private const double kMaxTabWidth = 250.0;
 
         private Dictionary<KNTabViewItem, KNTabViewTab> itemToTabCache = new Dictionary<KNTabViewItem, KNTabViewTab>();
-        private KNTabViewItem[] items = { new KNTabViewItem(), new KNTabViewItem(), new KNTabViewItem(), new KNTabViewItem() };
-
+        private KNTabViewItem[] items;
         private KNTabViewItem activeItem;
 
         public double TabHeight {
@@ -98,7 +94,7 @@ namespace KNControls {
 
             TabHeight = 40.0;
 
-            activeItem = items[0];
+            SnapsToDevicePixels = true;
 
             contentCanvas = new Border();
             contentCanvas.Background = new SolidColorBrush(Color.FromRgb(245, 245, 245));
@@ -123,7 +119,6 @@ namespace KNControls {
                 KNKeyValueObservingOptions.KNKeyValueObservingOptionNew |
                 KNKeyValueObservingOptions.KNKeyValueObservingOptionOld,
                 null);
-
         }
 
         private void TabClicked(object sender, EventArgs e) {
@@ -131,11 +126,13 @@ namespace KNControls {
         }
 
         private void TabResized(object sender, EventArgs e) {
+            UpdateTabViewLayout();
             InvalidateArrange();
         }
 
         public void ObserveValueForKeyPathOfObject(string keyPath, object obj, Dictionary<string, object> change, object context) {
-            if (keyPath.Equals("TabHeight")) { 
+            if (keyPath.Equals("TabHeight")) {
+                UpdateTabViewLayout();
                 InvalidateArrange();
             } else if (keyPath.Equals("ActiveItem")) {
 
@@ -151,6 +148,7 @@ namespace KNControls {
                     contentCanvas.Background = new SolidColorBrush(ActiveItem.TintColor);
                 }
 
+                UpdateTabViewLayout();
                 InvalidateArrange();
 
             } else if (keyPath.Equals("Items")) {
@@ -175,7 +173,7 @@ namespace KNControls {
                     }
 
                 }
-
+                UpdateTabViewLayout();
                 InvalidateArrange();
             }
         }
@@ -183,15 +181,15 @@ namespace KNControls {
         protected override void OnRenderSizeChanged(SizeChangedInfo sizeInfo) {
             base.OnRenderSizeChanged(sizeInfo);
 
-            InvalidateVisual();
+            UpdateTabViewLayout();
+            InvalidateArrange();
         }
 
-        protected override Size ArrangeOverride(Size arrangeSize) {
+        private void UpdateTabViewLayout() {
+            if (this.ActualWidth > 6.0 && this.ActualHeight > (TabHeight + 1.0)) {
 
-            if (arrangeSize.Width > 6.0 && arrangeSize.Height > (TabHeight + 1.0)) {
-
-                contentCanvas.Width = arrangeSize.Width - 6.0;
-                contentCanvas.Height = arrangeSize.Height - (TabHeight + 2.0);
+                contentCanvas.Width = this.ActualWidth - 6.0;
+                contentCanvas.Height = this.ActualHeight - (TabHeight + 2.0);
                 Canvas.SetTop(contentCanvas, TabHeight - 1.0);
                 Canvas.SetLeft(contentCanvas, 3.0);
 
@@ -227,9 +225,9 @@ namespace KNControls {
                     if (items.Length > 1) {
                         extraWidthFromOverlaps = kTabOverlap * (items.Length - 1.0);
                     }
-                    
+
                     double allowableWidth = this.ActualWidth - (kTabInset * 2) + extraWidthFromOverlaps;
-                    
+
                     if ((tabWidth * items.Length) > allowableWidth) {
                         tabWidth = Math.Floor(allowableWidth / items.Length);
                     }
@@ -241,8 +239,6 @@ namespace KNControls {
                         tab.Height = TabHeight;
                         tab.Width = tabWidth;
                         Canvas.SetLeft(tab, Math.Floor(tabOffset - kTabOverlap));
-
-                        System.Diagnostics.Debug.WriteLine(Canvas.GetLeft(tab));
 
                         if (item.Equals(activeItem)) {
                             Canvas.SetZIndex(tab, kActiveTabZIndex);
@@ -257,9 +253,8 @@ namespace KNControls {
                     }
                 }
             }
-            
-            return base.ArrangeOverride(arrangeSize);
         }
+
 
         private void CreateTabForItem(KNTabViewItem item) {
 
