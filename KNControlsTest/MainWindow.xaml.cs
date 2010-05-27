@@ -12,13 +12,17 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 using KNControls;
+using KNFoundation;
 using System.Reflection;
+
+using System.Runtime.InteropServices;
+using System.Windows.Interop;
 
 namespace KNControlsTest {
     /// <summary>
     /// Interaction logic for MainWindow.xaml
     /// </summary>
-    public partial class MainWindow : Window, KNTableView.KNTableViewDataSource, KNTableView.KNTableViewDelegate {
+    public partial class MainWindow : Window {
         public MainWindow() {
             InitializeComponent();
 
@@ -26,82 +30,91 @@ namespace KNControlsTest {
 
         }
 
-        private string[] elements = { "a", "b", "c", "a", "b", "c", "a", "b", "c", "a", "b", "c" };
-        private bool[] bools = { true, false, true, true, false, true, true, false, true, true, false, true };
-        private BitmapImage image;
+ 
+[StructLayout(LayoutKind.Sequential)]
+struct MARGINS
+{
+    public int cxLeftWidth;
+    public int cxRightWidth;
+    public int cyTopHeight;
+    public int cyBottomHeight;
+}
+ 
+[DllImport("dwmapi.dll")]
+static extern int 
+   DwmExtendFrameIntoClientArea(IntPtr hWnd, ref MARGINS pMarInset);
+
+[DllImport("dwmapi.dll")]
+extern static int DwmIsCompositionEnabled(ref int en);
+
+public static void ExtendGlass(Window window, Thickness thikness) {
+    try {
+        int isGlassEnabled = 0;
+        DwmIsCompositionEnabled(ref isGlassEnabled);
+        if (Environment.OSVersion.Version.Major > 5 && isGlassEnabled > 0) {
+            // Get the window handle
+            WindowInteropHelper helper = new WindowInteropHelper(window);
+            HwndSource mainWindowSrc = (HwndSource)HwndSource.
+                FromHwnd(helper.Handle);
+            mainWindowSrc.CompositionTarget.BackgroundColor =
+                Colors.Transparent;
+
+            // Get the dpi of the screen
+            System.Drawing.Graphics desktop =
+               System.Drawing.Graphics.FromHwnd(mainWindowSrc.Handle);
+            float dpiX = desktop.DpiX / 96;
+            float dpiY = desktop.DpiY / 96;
+
+            // Set Margins
+            MARGINS margins = new MARGINS();
+            margins.cxLeftWidth = (int)(thikness.Left * dpiX);
+            margins.cxRightWidth = (int)(thikness.Right * dpiX);
+            margins.cyBottomHeight = (int)(thikness.Bottom * dpiY);
+            margins.cyTopHeight = (int)(thikness.Top * dpiY);
+
+            window.Background = Brushes.Transparent;
+
+            int hr = DwmExtendFrameIntoClientArea(mainWindowSrc.Handle,
+                        ref margins);
+        } else {
+            window.Background = SystemColors.WindowBrush;
+        }
+    } catch (DllNotFoundException) {
+
+    }
+}
+
 
         private void DidLoadYay(object sender, EventArgs e) {
 
+            ExtendGlass(this, new Thickness(45.0));
+
             System.Windows.Forms.Application.EnableVisualStyles();
 
-            image = new BitmapImage();
+            BitmapImage image = new BitmapImage();
             image.BeginInit();
-            image.StreamSource = Assembly.GetExecutingAssembly().GetManifestResourceStream("KNControlsTest.iPodGeneration1.png");
+            image.StreamSource = Assembly.GetExecutingAssembly().GetManifestResourceStream("KNControlsTest.SourcePlaylist.png");
             image.EndInit();
 
-            kNTableView1.Columns = new KNTableColumn[] { new KNTableColumn("progress", "Progress Wheel", new KNProgressWheelCell(), null),
-                new KNTableColumn("image", "Image",new KNImageCell(), null),
-                new KNTableColumn("bool", "Checkbox",new KNCheckboxCell(), null),
-                new KNTableColumn("test", "Text",new KNTextCell(), null),
-                new KNTableColumn("test", "Text",new KNTextCell(), null) };
+            KNViewController tableController = new KNViewController(new TableView());
 
-            kNTableView1.Columns[0].MinimumWidth = 10;
-            kNTableView1.AllowMultipleSelection = false;
-            kNTableView1.RowHeight = 40.0;
-            kNTableView1.DataSource = this;
-            kNTableView1.Delegate = this;
-            kNTableView1.ReloadData();
+            KNTabViewItem tableItem = new KNTabViewItem();
+            tableItem.ViewController = tableController;
+            tableItem.Title = "KNTableView";
+            tableItem.TintColor = Colors.White;
+            tableItem.Icon = image;
 
-            kNTableView1.Focus();
+            TabViewTestController tabTest = new TabViewTestController();
+
+            kNTabView1.TabHeight = 30.0;
+            kNTabView1.Items = new KNTabViewItem[] { tableItem, tabTest.TabViewItem };
         }
 
 
-        public int NumberOfItemsInTableView(KNTableView table) {
-            return elements.Length;
-        }
+        
 
-        public object ObjectForRow(KNTableView table, KNTableColumn column, int rowIndex) {
+        private void Window_Loaded(object sender, RoutedEventArgs e) {
 
-            //System.Diagnostics.Debug.WriteLine(rowIndex.ToString());
-
-            if (column.Identifier.Equals("image")) {
-                return image;
-            } else if (column.Identifier.Equals("bool")) {
-                return bools[rowIndex];
-            } else {
-                return elements[rowIndex];
-            }
-        }
-
-        public void CellPerformedAction(KNTableView view, KNTableColumn column, KNActionCell cell, int rowIndex) {
-
-            if (column.Identifier.Equals("bool")) {
-                bools[rowIndex] = (bool)cell.ObjectValue;
-            }
-        }
-
-        public bool TableViewShouldSelectRow(KNTableView table, int rowIndex) {
-            return true;
-        }
-
-        public KNTableColumn.SortDirection TableViewWillSortByColumnWithSuggestedSortOrder(KNTableView table, KNTableColumn column, KNTableColumn.SortDirection suggestedNewSortOrder) {
-
-            Array.Sort(elements);
-
-            if (suggestedNewSortOrder == KNTableColumn.SortDirection.Descending) {
-                Array.Reverse(elements);
-            }
-            
-            return suggestedNewSortOrder;
-        }
-
-
-        public bool TableViewDelegateShouldBeginDragOperationWithObjectsAtIndexes(KNTableView table, System.Collections.ArrayList rowIndexes) {
-            //MessageBox.Show("Drag");
-
-            DragDrop.DoDragDrop(table, "test", DragDropEffects.Copy);
-
-            return true;
         }
     }
 }

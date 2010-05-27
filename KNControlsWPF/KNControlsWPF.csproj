@@ -35,7 +35,8 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="KNFoundation">
+    <Reference Include="KNFoundation, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\KNFoundation\KNFoundation\bin\Release\KNFoundation.dll</HintPath>
     </Reference>
     <Reference Include="System" />
@@ -55,6 +56,9 @@
     <Reference Include="PresentationFramework" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="KNColorExtensions.cs" />
+    <Compile Include="TabView\KNTabView.cs" />
+    <Compile Include="TabView\KNTabViewItem.cs" />
     <Page Include="Themes\Generic.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>

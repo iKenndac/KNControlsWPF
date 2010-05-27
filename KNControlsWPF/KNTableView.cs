@@ -577,9 +577,12 @@ namespace KNControls {
 
             // Haha, swallow. *High five*
 
+            
+
             e.Handled = true;
             this.Focus();
             dragDecision = MouseDragDecision.NoDecisionMade;
+            this.CaptureMouse();
 
             Point mouseLocationInControl = e.GetPosition(this);
             lastMouseDownPoint = mouseLocationInControl;
@@ -840,6 +843,7 @@ namespace KNControls {
             e.Handled = true;
             Point mouseLocationInControl = e.GetPosition(this);
             dragDecision = MouseDragDecision.NoDecisionMade;
+            this.ReleaseMouseCapture();
 
             if (mouseEventsCell != null && mouseEventsCellSwallowedEvents) {
 
@@ -1068,7 +1072,6 @@ namespace KNControls {
                     contentArea.Width,
                     RowHeight);
 
-
                 if (SelectedRows.Contains(currentRow)) {
                     // Draw selection background
 
@@ -1076,7 +1079,7 @@ namespace KNControls {
                         rowRect.Y,
                         virtualWidth - (2 * horizontalPadding),
                         RowHeight);
-
+                    
                     DrawRowHighlightInRect(drawingContext, rowContentRect, rowRect);
 
                 } else {
