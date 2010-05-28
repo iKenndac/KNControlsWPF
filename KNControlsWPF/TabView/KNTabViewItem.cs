@@ -8,8 +8,27 @@ using KNFoundation.KNKVC;
 using KNFoundation;
 
 namespace KNControls {
-    public class KNTabViewItem {
+    public interface KNTabViewItem {
 
+        string Title {
+            get;
+        }
+
+        Color TintColor {
+            get;
+        }
+
+        BitmapImage Icon {
+            get;
+        }
+
+        KNViewController ViewController {
+            get;
+        }
+    }
+
+
+    public class KNBasicTabViewItem : KNTabViewItem {
         string title;
         Color tintColor;
         BitmapImage icon;

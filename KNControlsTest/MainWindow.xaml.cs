@@ -97,7 +97,7 @@ namespace KNControlsTest {
 
             KNViewController tableController = new KNViewController(new TableView());
 
-            KNTabViewItem tableItem = new KNTabViewItem();
+            KNBasicTabViewItem tableItem = new KNBasicTabViewItem();
             tableItem.ViewController = tableController;
             tableItem.Title = "KNTableView";
             tableItem.TintColor = Colors.White;
@@ -105,7 +105,6 @@ namespace KNControlsTest {
 
             TabViewTestController tabTest = new TabViewTestController();
 
-            kNTabView1.TabHeight = 30.0;
             kNTabView1.Items = new KNTabViewItem[] { tableItem, tabTest.TabViewItem };
         }
 

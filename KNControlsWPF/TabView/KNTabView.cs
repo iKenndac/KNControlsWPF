@@ -92,7 +92,7 @@ namespace KNControls {
         public KNTabView()
             : base() {
 
-            TabHeight = 40.0;
+            TabHeight = 30.0;
 
             SnapsToDevicePixels = true;
 

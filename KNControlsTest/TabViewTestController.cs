@@ -9,13 +9,13 @@ using KNFoundation;
 namespace KNControlsTest {
     class TabViewTestController : KNViewController {
 
-        private KNTabViewItem tabViewItem;
+        private KNBasicTabViewItem tabViewItem;
         private TextBox titleField;
 
         public TabViewTestController()
             : base(new TabViewTest()) {
 
-                tabViewItem = new KNTabViewItem();
+                tabViewItem = new KNBasicTabViewItem();
                 tabViewItem.Title = "KNTabView";
                 tabViewItem.ViewController = this;
 
