@@ -328,28 +328,34 @@ namespace KNControls {
 
             if (e.Key == Key.Up) {
                 SelectUpOneRow((e.KeyboardDevice.Modifiers & ModifierKeys.Shift) != 0);
+                e.Handled = true;
             }
 
             if (e.Key == Key.Down) {
                 SelectDownOneRow((e.KeyboardDevice.Modifiers & ModifierKeys.Shift) != 0);
+                e.Handled = true;
             }
 
             if (e.Key == Key.Home) {
                 EnsureRowIsVisible(0);
+                e.Handled = true;
             }
 
             if (e.Key == Key.End) {
                 if (DataSource != null) {
                     EnsureRowIsVisible(DataSource.NumberOfItemsInTableView(this) - 1);
+                    e.Handled = true;
                 }
             }
 
             if (e.Key == Key.PageUp) {
                 verticalScrollbar.Value -= verticalScrollbar.LargeChange;
+                e.Handled = true;
             }
 
             if (e.Key == Key.PageDown) {
                 verticalScrollbar.Value += verticalScrollbar.LargeChange;
+                e.Handled = true;
             }
 
         }
@@ -449,6 +455,7 @@ namespace KNControls {
                     }
                 }
             }
+            InvalidateVisual();
         }
 
         public void SelectDownOneRow(bool extendSelection) {
@@ -546,6 +553,7 @@ namespace KNControls {
                     }
                 }
             }
+            InvalidateVisual();
         }
 
         public void EnsureRowIsVisible(int row) {
@@ -596,7 +604,11 @@ namespace KNControls {
                     if (row < DataSource.NumberOfItemsInTableView(this) && row > -1) {
 
                         if (Keyboard.Modifiers == ModifierKeys.Control && SelectedRows.Contains(row)) {
-                            SelectedRows.Remove(row);
+
+                            ArrayList newSelection = new ArrayList(SelectedRows);
+                            newSelection.Remove(row);
+                            SelectedRows = newSelection;
+
                         } else if (SelectedRows.Contains(row)) {
 
                             // In this case, the user either wants to select the single row 
@@ -608,15 +620,19 @@ namespace KNControls {
 
                             if ((Keyboard.Modifiers & ModifierKeys.Control) != 0 && AllowMultipleSelection) {
 
+                                ArrayList newSelection = new ArrayList(SelectedRows);
+
                                 if (Delegate != null) {
                                     if (Delegate.TableViewShouldSelectRow(this, row)) {
-                                        SelectedRows.Add(row);
+                                        newSelection.Add(row);
                                         hingedRow = row;
                                     }
                                 } else {
-                                    SelectedRows.Add(row);
+                                    newSelection.Add(row);
                                     hingedRow = row;
                                 }
+
+                                SelectedRows = newSelection;
 
                             } else if ((Keyboard.Modifiers & ModifierKeys.Shift) != 0 && AllowMultipleSelection && SelectedRows.Count > 0 && hingedRow > -1) {
 
@@ -634,29 +650,34 @@ namespace KNControls {
                                     maxRow = hingedRow;
                                 }
 
-                                SelectedRows.Clear();
-
+                                ArrayList newSelection = new ArrayList();
+                                                     
                                 for (int currentRow = minRow; currentRow <= maxRow; currentRow++) {
                                     if (Delegate != null) {
                                         if (Delegate.TableViewShouldSelectRow(this, currentRow)) {
-                                            SelectedRows.Add(currentRow);
+                                            newSelection.Add(currentRow);
                                         }
                                     } else {
-                                        SelectedRows.Add(currentRow);
+                                        newSelection.Add(currentRow);
                                     }
                                 }
+
+                                SelectedRows = newSelection;
 
                             } else {
                                 // Replace selection 
                                 if (Delegate != null) {
                                     if (Delegate.TableViewShouldSelectRow(this, row)) {
-                                        SelectedRows.Clear();
-                                        SelectedRows.Add(row);
+
+                                        ArrayList newSelection = new ArrayList();
+                                        newSelection.Add(row);
+                                        SelectedRows = newSelection;
                                         hingedRow = row;
                                     }
                                 } else {
-                                    SelectedRows.Clear();
-                                    SelectedRows.Add(row);
+                                    ArrayList newSelection = new ArrayList();
+                                    newSelection.Add(row);
+                                    SelectedRows = newSelection;
                                     hingedRow = row;
                                 }
                             }
@@ -666,10 +687,10 @@ namespace KNControls {
                         // Clear selection
                         if (Delegate != null) {
                             if (Delegate.TableViewShouldSelectRow(this, row)) {
-                                SelectedRows.Clear();
+                                SelectedRows = new ArrayList();
                             }
                         } else {
-                            SelectedRows.Clear();
+                            SelectedRows = new ArrayList();
                         }
                     }
                 }
@@ -1262,7 +1283,16 @@ namespace KNControls {
             }
         }
 
-        public ArrayList SelectedRows { get; set; }
+        private ArrayList selectedRows;
+
+        public ArrayList SelectedRows {
+            get { return selectedRows; }
+            set {
+                this.WillChangeValueForKey("SelectedRows");
+                selectedRows = value;
+                this.DidChangeValueForKey("SelectedRows");
+            }
+        }
 
         public bool AlternatingRows { get; set; }
 

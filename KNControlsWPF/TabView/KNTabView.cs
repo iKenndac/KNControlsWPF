@@ -525,7 +525,7 @@ namespace KNControls {
 
                 if (IsActive) {
 
-                    Color topColor = baseColor.LighterColorBy(0.15);
+                    Color topColor = baseColor.LighterColorBy(0.05);
 
                     GradientBrush brush = new LinearGradientBrush(topColor, baseColor, 90.0);
                     dc.DrawGeometry(brush, new Pen(new SolidColorBrush(Color.FromArgb(50, 0, 0, 0)), 1.0), tabPath);
