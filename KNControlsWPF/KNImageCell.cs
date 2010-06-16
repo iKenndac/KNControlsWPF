@@ -21,9 +21,16 @@ namespace KNControls {
             if (image != null) {
 
                 Rect imageRect;
+                double pixelWidth;
+                double pixelHeight;
 
-                double pixelWidth = (image.Width / 96.0) * 72.0;
-                double pixelHeight = (image.Height / 96.0) * 72.0;
+                if (image.GetType() == typeof(BitmapImage)) {
+                    pixelWidth = image.Width;
+                    pixelHeight = image.Height;
+                } else {
+                    pixelWidth = (image.Width / 96.0) * 72.0;
+                    pixelHeight = (image.Height / 96.0) * 72.0;
+                }
 
                 if (pixelWidth <= frame.Width && pixelHeight <= frame.Height) {
 

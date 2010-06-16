@@ -60,10 +60,12 @@ namespace KNControls {
         public KNTableColumn(string anIdentifier, string aTitle, KNCell aDataCell, KNTableColumnDelegate aDelegate)
             : this() {
 
-                identifier = anIdentifier;
+            identifier = anIdentifier;
+            if (aDataCell != null) {
                 cell = aDataCell;
-                del = aDelegate;
-                headerCell.ObjectValue = aTitle;
+            }
+            del = aDelegate;
+            headerCell.ObjectValue = aTitle;
         }
 
         public KNCell CellForRow(int row) {
