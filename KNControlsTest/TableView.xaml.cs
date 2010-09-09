@@ -50,6 +50,8 @@ namespace KNControlsTest {
             kNTableView1.ReloadData();
 
             kNTableView1.HeaderHeight = 0;
+            kNTableView1.VerticalScrollBarVisibility = KNTableView.ScrollBarVisibility.Automatic;
+            kNTableView1.HorizontalScrollBarVisibility = KNTableView.ScrollBarVisibility.Automatic;
 
             kNTableView1.Focus();
 

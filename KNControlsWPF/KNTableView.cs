@@ -75,7 +75,7 @@ namespace KNControls {
         }
 
         public void ObserveValueForKeyPathOfObject(string keyPath, object obj, Dictionary<string, object> change, object context) {
-            if (keyPath.Equals("Width") || keyPath.Equals("HeaderHeight")) {
+            if (keyPath.Equals("Width") || keyPath.Equals("HeaderHeight") || keyPath.Equals("VerticalScrollBarVisibility") || keyPath.Equals("HorizontalScrollBarVisibility")) {
                 RecalculateGeometry();
             }
         }
@@ -141,6 +141,8 @@ namespace KNControls {
         ScrollBar verticalScrollbar;
         ScrollBar horizontalScrollbar;
         double headerHeight;
+        ScrollBarVisibility horizontalScrollbarVisibility;
+        ScrollBarVisibility verticalScrollbarVisibility;
 
         public KNTableView() {
 
@@ -170,16 +172,19 @@ namespace KNControls {
             Columns = new KNTableColumn[] {};
             RowHeight = 22.0;
             AlternateRowColor = Color.FromRgb(237, 243, 254);
-            //AlternatingRows = true;
 
             HeaderHeight = 24.0;
             RowSelectionStyle = SelectionStyle.WindowsExplorer;
 
             horizontalScrollbar.SmallChange = RowHeight;
 
+            VerticalScrollBarVisibility = ScrollBarVisibility.Automatic;
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Automatic;
+
             //Canvas.SetTop(verticalScrollbar, HeaderHeight + 1);
             this.AddObserverToKeyPathWithOptions(this, "HeaderHeight", 0, null);
-       
+            this.AddObserverToKeyPathWithOptions(this, "VerticalScrollBarVisibility", 0, null);
+            this.AddObserverToKeyPathWithOptions(this, "HorizontalScrollBarVisibility", 0, null);
         }
 
         private double horizontalPadding = 10.0;
@@ -210,14 +215,6 @@ namespace KNControls {
         
         protected override void OnRenderSizeChanged(SizeChangedInfo sizeInfo) {
             base.OnRenderSizeChanged(sizeInfo);
-
-            if (sizeInfo.HeightChanged) {
-                verticalScrollbar.Height = sizeInfo.NewSize.Height - horizontalScrollbar.ActualHeight;
-            }
-
-            if (sizeInfo.WidthChanged) {
-                horizontalScrollbar.Width = sizeInfo.NewSize.Width - verticalScrollbar.ActualWidth;
-            }
 
             RecalculateGeometry();
             InvalidateVisual();
@@ -307,25 +304,137 @@ namespace KNControls {
 
         private void RecalculateGeometry() {
 
-            bounds = new Rect(0, 0, ActualWidth, ActualHeight);
-            headersArea = new Rect(0, 0, ActualWidth, HeaderHeight);
-            contentArea = new Rect(0,
-                HeaderHeight + 1, 
-                ActualWidth - verticalScrollbar.ActualWidth, 
-                ActualHeight - horizontalScrollbar.ActualHeight - HeaderHeight - 1.0);
-
             virtualWidth = horizontalPadding * 2;
             foreach (KNTableColumn column in Columns) {
                 virtualWidth += column.Width;
             }
 
+            bounds = new Rect(0, 0, ActualWidth, ActualHeight);
+            headersArea = new Rect(0, 0, ActualWidth, HeaderHeight);
+
+            // Calculate whether to show scroll bar(s) or not!
+
+            Boolean horizontalScrollBarWillBeShown = false;
+            Boolean verticalScrollBarWillBeShown = false;
+
+            Rect proposedContentAreaWithScrollBars = new Rect(0,
+                   HeaderHeight + 1,
+                   ActualWidth - verticalScrollbar.ActualWidth,
+                   ActualHeight - horizontalScrollbar.ActualHeight - HeaderHeight - 1.0);
+
+            Rect proposedContentAreaWithoutScrollBars = new Rect(0,
+               HeaderHeight + 1,
+               ActualWidth,
+               ActualHeight - HeaderHeight - 1.0);
+
+            if (VerticalScrollBarVisibility == ScrollBarVisibility.Automatic &&
+                HorizontalScrollBarVisibility == ScrollBarVisibility.Automatic) {
+
+                    if (virtualWidth <= proposedContentAreaWithScrollBars.Width && virtualHeight <= proposedContentAreaWithScrollBars.Height) {
+                        horizontalScrollBarWillBeShown = false;
+                        verticalScrollBarWillBeShown = false;
+
+                    } else if (virtualWidth > proposedContentAreaWithoutScrollBars.Width && virtualHeight <= proposedContentAreaWithScrollBars.Height) {
+                        horizontalScrollBarWillBeShown = true;
+                        verticalScrollBarWillBeShown = false;
+
+                    } else if (virtualWidth <= proposedContentAreaWithScrollBars.Width && virtualHeight > proposedContentAreaWithoutScrollBars.Height) {
+                        horizontalScrollBarWillBeShown = false;
+                        verticalScrollBarWillBeShown = true;
+
+                        // At this point in the tree, at least one bound is within where scroll bars might be!
+                       } else if (virtualWidth > proposedContentAreaWithoutScrollBars.Width && virtualHeight > proposedContentAreaWithoutScrollBars.Height) {
+                        horizontalScrollBarWillBeShown = true;
+                        verticalScrollBarWillBeShown = true;
+
+                    } else if (virtualWidth > proposedContentAreaWithScrollBars.Width) {
+
+                        // Virtual width is where a vertical scroll bar might be. Do we need to show a horizontal scroll bar?
+
+                        if (virtualHeight > proposedContentAreaWithoutScrollBars.Height) {
+                            horizontalScrollBarWillBeShown = true;
+                            verticalScrollBarWillBeShown = true;
+
+                        } else if (virtualHeight <= proposedContentAreaWithScrollBars.Height) {
+                            horizontalScrollBarWillBeShown = false;
+                            verticalScrollBarWillBeShown = false;
+
+                        } else {
+                            horizontalScrollBarWillBeShown = true;
+                            verticalScrollBarWillBeShown = true;
+
+                        }
+
+
+                    } else if (virtualHeight > proposedContentAreaWithScrollBars.Height) {
+
+                        // Virtual height is where a horizontal scroll bar might be. Do we need to show a vertical scroll bar?
+
+                        if (virtualWidth > proposedContentAreaWithoutScrollBars.Width) {
+                            horizontalScrollBarWillBeShown = true;
+                            verticalScrollBarWillBeShown = true;
+
+                        } else if (virtualWidth <= proposedContentAreaWithScrollBars.Width) {
+                            horizontalScrollBarWillBeShown = false;
+                            verticalScrollBarWillBeShown = false;
+
+                        } else {
+                            horizontalScrollBarWillBeShown = true;
+                            verticalScrollBarWillBeShown = true;
+
+                        }
+
+                   
+
+                    } else {
+                        horizontalScrollBarWillBeShown = false;
+                        verticalScrollBarWillBeShown = false;
+                    }
+
+
+
+            } else {
+
+                Boolean showingHorizontalBarWouldRequireVerticalBar = virtualHeight > proposedContentAreaWithScrollBars.Height &&
+                    virtualHeight <= proposedContentAreaWithoutScrollBars.Height;
+                Boolean showingVerticalBarWouldRequireHorizontalBar = virtualWidth > proposedContentAreaWithScrollBars.Width &&
+                    virtualWidth <= proposedContentAreaWithoutScrollBars.Width;
+
+                
+                if (VerticalScrollBarVisibility == ScrollBarVisibility.Visible) {
+                    verticalScrollBarWillBeShown = true;
+                } else if (VerticalScrollBarVisibility == ScrollBarVisibility.Automatic) {
+                    verticalScrollBarWillBeShown = (virtualHeight > proposedContentAreaWithoutScrollBars.Height) ||
+                        (HorizontalScrollBarVisibility == ScrollBarVisibility.Visible && showingHorizontalBarWouldRequireVerticalBar);
+                }
+
+                if (HorizontalScrollBarVisibility == ScrollBarVisibility.Visible) {
+                    horizontalScrollBarWillBeShown = true;
+                } else if (HorizontalScrollBarVisibility == ScrollBarVisibility.Automatic) {
+                    horizontalScrollBarWillBeShown = (virtualWidth > proposedContentAreaWithoutScrollBars.Width) ||
+                         (VerticalScrollBarVisibility == ScrollBarVisibility.Visible && showingVerticalBarWouldRequireHorizontalBar);
+                }
+
+            }
+
+            contentArea = new Rect(0,
+                HeaderHeight + 1, 
+                ActualWidth - (verticalScrollBarWillBeShown ? verticalScrollbar.Width : 0.0), 
+                ActualHeight - (horizontalScrollBarWillBeShown ? horizontalScrollbar.Height : 0.0) - HeaderHeight - 1.0);
+
             verticalScrollbar.LargeChange = contentArea.Height; 
             verticalScrollbar.Maximum = virtualHeight - contentArea.Height;
+            verticalScrollbar.Visibility = verticalScrollBarWillBeShown ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed;
+
             horizontalScrollbar.LargeChange = contentArea.Width;
             horizontalScrollbar.Maximum = virtualWidth - contentArea.Width;
+            horizontalScrollbar.Visibility = horizontalScrollBarWillBeShown ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed;
 
             verticalScrollbar.ViewportSize = contentArea.Height;
             horizontalScrollbar.ViewportSize = contentArea.Width;
+
+            verticalScrollbar.Height = contentArea.Height;
+            horizontalScrollbar.Width = contentArea.Width;
 
         }
 
@@ -1268,6 +1377,24 @@ namespace KNControls {
                 this.WillChangeValueForKey("HeaderHeight");
                 headerHeight = value;
                 this.DidChangeValueForKey("HeaderHeight");
+            }
+        }
+
+        public ScrollBarVisibility VerticalScrollBarVisibility {
+            get { return verticalScrollbarVisibility; }
+            set { 
+                this.WillChangeValueForKey("VerticalScrollBarVisibility");
+                verticalScrollbarVisibility = value;
+                this.DidChangeValueForKey("VerticalScrollBarVisibility");
+            }
+        }
+
+        public ScrollBarVisibility HorizontalScrollBarVisibility {
+            get { return horizontalScrollbarVisibility; }
+            set {
+                this.WillChangeValueForKey("HorizontalScrollBarVisibility");
+                horizontalScrollbarVisibility = value;
+                this.DidChangeValueForKey("HorizontalScrollBarVisibility");
             }
         }
 
