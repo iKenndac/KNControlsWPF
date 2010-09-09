@@ -49,6 +49,8 @@ namespace KNControlsTest {
             kNTableView1.Delegate = this;
             kNTableView1.ReloadData();
 
+            kNTableView1.HeaderHeight = 0;
+
             kNTableView1.Focus();
 
         }

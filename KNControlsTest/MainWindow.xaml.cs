@@ -54,6 +54,8 @@ namespace KNControlsTest {
             TabViewTestController tabTest = new TabViewTestController();
 
             kNTabView1.Items = new KNTabViewItem[] { tableItem, tabTest.TabViewItem };
+
+           
         }
 
     }

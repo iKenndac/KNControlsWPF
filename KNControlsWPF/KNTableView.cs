@@ -68,8 +68,14 @@ namespace KNControls {
             WindowsExplorer = 2
         }
 
+        public enum ScrollBarVisibility {
+            Visible = 0,
+            Hidden = 1, 
+            Automatic = 2
+        }
+
         public void ObserveValueForKeyPathOfObject(string keyPath, object obj, Dictionary<string, object> change, object context) {
-            if (keyPath.Equals("Width")) {
+            if (keyPath.Equals("Width") || keyPath.Equals("HeaderHeight")) {
                 RecalculateGeometry();
             }
         }
@@ -89,7 +95,6 @@ namespace KNControls {
                 DataSource.CellPerformedAction(this, column, cell, column.RowForCell(cell));
                 ReloadData();
             }
-
         }
 
         public void HeaderWasClicked(KNTableColumn column) {
@@ -135,6 +140,7 @@ namespace KNControls {
 
         ScrollBar verticalScrollbar;
         ScrollBar horizontalScrollbar;
+        double headerHeight;
 
         public KNTableView() {
 
@@ -172,7 +178,7 @@ namespace KNControls {
             horizontalScrollbar.SmallChange = RowHeight;
 
             //Canvas.SetTop(verticalScrollbar, HeaderHeight + 1);
-
+            this.AddObserverToKeyPathWithOptions(this, "HeaderHeight", 0, null);
        
         }
 
@@ -1158,13 +1164,15 @@ namespace KNControls {
 
             foreach (KNTableColumn column in Columns) {
 
-                Rect headerRect = new Rect(colStartX - xOffset, headersArea.Y, column.Width, headersArea.Height);
+                if (headersArea.Height > 0.0) {
+                    Rect headerRect = new Rect(colStartX - xOffset, headersArea.Y, column.Width, headersArea.Height);
 
-                if (headerRect.IntersectsWith(headersArea)) {
+                    if (headerRect.IntersectsWith(headersArea)) {
 
-                    drawingContext.PushClip(new RectangleGeometry(headerRect));
-                    column.HeaderCell.RenderInFrame(drawingContext, headerRect);
-                    drawingContext.Pop();
+                        drawingContext.PushClip(new RectangleGeometry(headerRect));
+                        column.HeaderCell.RenderInFrame(drawingContext, headerRect);
+                        drawingContext.Pop();
+                    }
                 }
 
                 colStartX += column.Width;
@@ -1175,7 +1183,7 @@ namespace KNControls {
                         new Point(colStartX - 1.0, contentArea.Y + contentArea.Height));
                 }
 
-                if ((headersArea.Width - colStartX) > 0) {
+                if ((headersArea.Width - colStartX) > 0 && headersArea.Height > 0.0) {
                     if (CornerCell != null) {
                         CornerCell.RenderInFrame(drawingContext, new Rect(colStartX, headersArea.Y, headersArea.Width - colStartX + 1, headersArea.Height));
                     }
@@ -1254,7 +1262,14 @@ namespace KNControls {
 
         private KNTableColumn[] columns;
 
-        public double HeaderHeight { get; set; }
+        public double HeaderHeight {
+            get { return headerHeight; }
+            set {
+                this.WillChangeValueForKey("HeaderHeight");
+                headerHeight = value;
+                this.DidChangeValueForKey("HeaderHeight");
+            }
+        }
 
         public Color BackgroundColor { get; set; }
 
