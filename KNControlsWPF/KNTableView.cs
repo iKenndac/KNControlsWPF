@@ -181,13 +181,16 @@ namespace KNControls {
             VerticalScrollBarVisibility = ScrollBarVisibility.Automatic;
             HorizontalScrollBarVisibility = ScrollBarVisibility.Automatic;
 
+            ContentPadding = new Thickness(20.0);
+
             //Canvas.SetTop(verticalScrollbar, HeaderHeight + 1);
             this.AddObserverToKeyPathWithOptions(this, "HeaderHeight", 0, null);
             this.AddObserverToKeyPathWithOptions(this, "VerticalScrollBarVisibility", 0, null);
             this.AddObserverToKeyPathWithOptions(this, "HorizontalScrollBarVisibility", 0, null);
+            this.AddObserverToKeyPathWithOptions(this, "ContentPadding", 0, null);
         }
 
-        private double horizontalPadding = 10.0;
+        private Thickness contentPadding;
 
         private int actualRowCount = 0;
         private double virtualHeight = 0.0;
@@ -245,7 +248,7 @@ namespace KNControls {
                     while (remainingColumns.Count > 0) {
 
                         bool allColumnsFit = true;
-                        double suggestedHeaderWidth = (contentArea.Width - widthLostToFixedColumns - (horizontalPadding * 2)) / remainingColumns.Count;
+                        double suggestedHeaderWidth = (contentArea.Width - widthLostToFixedColumns - (ContentPadding.Left  + ContentPadding.Right)) / remainingColumns.Count;
                         ArrayList columnsThatDidntFit = new ArrayList();
 
                         foreach (KNTableColumn column in remainingColumns) {
@@ -290,7 +293,7 @@ namespace KNControls {
             if (DataSource != null) {
 
                 actualRowCount = DataSource.NumberOfItemsInTableView(this);
-                virtualHeight = actualRowCount * RowHeight;
+                virtualHeight = (actualRowCount * RowHeight) + ContentPadding.Top + ContentPadding.Bottom;
 
             }
 
@@ -308,7 +311,7 @@ namespace KNControls {
                 return;
             }
 
-            virtualWidth = horizontalPadding * 2;
+            virtualWidth = ContentPadding.Left + ContentPadding.Right;
             foreach (KNTableColumn column in Columns) {
                 virtualWidth += column.Width;
             }
@@ -1094,7 +1097,7 @@ namespace KNControls {
 
             if (headersArea.Contains(point)) {
 
-                int colStartX = (int)horizontalPadding;
+                double colStartX = ContentPadding.Left;
                 double xOffset = horizontalScrollbar.Value;
                 double yOffset = verticalScrollbar.Value;
 
@@ -1148,7 +1151,7 @@ namespace KNControls {
 
         private KNTableColumn ColumnAtAbsoluteOffset(double x, out int absoluteXOffset) {
 
-            int colStartX = (int)horizontalPadding;
+            double colStartX = ContentPadding.Left;
             double xOffset = horizontalScrollbar.Value;
             double yOffset = verticalScrollbar.Value;
 
@@ -1180,9 +1183,9 @@ namespace KNControls {
             }
 
             double yOffset = verticalScrollbar.Value;
-            int row = (int)Math.Floor((yOffset + (y - contentArea.Top)) / RowHeight);
+            int row = (int)Math.Floor((yOffset + (y - contentArea.Top - ContentPadding.Top)) / RowHeight);
 
-            absoluteYOffset = (row * RowHeight) + contentArea.Top - yOffset;
+            absoluteYOffset = (row * RowHeight) + ContentPadding.Top + contentArea.Top - yOffset;
             return row;
         }
 
@@ -1215,9 +1218,9 @@ namespace KNControls {
                 if (SelectedRows.Contains(currentRow)) {
                     // Draw selection background
 
-                    Rect rowContentRect = new Rect(contentArea.X + horizontalPadding - xOffset,
-                        rowRect.Y,
-                        virtualWidth - (2 * horizontalPadding),
+                    Rect rowContentRect = new Rect(contentArea.X + ContentPadding.Left - xOffset,
+                        rowRect.Y + ContentPadding.Top,
+                        virtualWidth - (ContentPadding.Left + ContentPadding.Right),
                         RowHeight);
                     
                     DrawRowHighlightInRect(drawingContext, rowContentRect, rowRect);
@@ -1230,13 +1233,13 @@ namespace KNControls {
 
                 // Draw rows
 
-                int columnStartX = (int)horizontalPadding;
+                double columnStartX = ContentPadding.Left;
 
                 if (currentRow < actualRowCount) {
 
                     foreach (KNTableColumn column in Columns) {
 
-                        Rect columnRect = new Rect(columnStartX - xOffset, rowRect.Y, column.Width, rowRect.Height);
+                        Rect columnRect = new Rect(columnStartX - xOffset, rowRect.Y + ContentPadding.Top, column.Width, rowRect.Height);
                         columnStartX += column.Width;
 
                         if (contentArea.IntersectsWith(columnRect)) {
@@ -1273,7 +1276,7 @@ namespace KNControls {
 
             // Go through columns again, this time drawig vertical lines and headers
 
-            int colStartX = (int)horizontalPadding;
+            double colStartX = ContentPadding.Left;
 
             foreach (KNTableColumn column in Columns) {
 
@@ -1381,6 +1384,15 @@ namespace KNControls {
                 this.WillChangeValueForKey("HeaderHeight");
                 headerHeight = value;
                 this.DidChangeValueForKey("HeaderHeight");
+            }
+        }
+
+        public Thickness ContentPadding {
+            get { return contentPadding; }
+            set {
+                this.WillChangeValueForKey("ContentPadding");
+                contentPadding = value;
+                this.DidChangeValueForKey("ContentPadding");
             }
         }
 
