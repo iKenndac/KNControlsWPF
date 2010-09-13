@@ -138,6 +138,7 @@ namespace KNControls {
 
                 if (ActiveItem != null && ActiveItem.ViewController != null) {
                     contentCanvas.Child = ActiveItem.ViewController.View;
+                    ActiveItem.ViewController.ViewWillBeShown();
                 } else {
                     contentCanvas.Child = null;
                 }

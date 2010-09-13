@@ -304,6 +304,10 @@ namespace KNControls {
 
         private void RecalculateGeometry() {
 
+            if (this.ActualHeight == 0.0 && this.ActualWidth == 0.0) {
+                return;
+            }
+
             virtualWidth = horizontalPadding * 2;
             foreach (KNTableColumn column in Columns) {
                 virtualWidth += column.Width;
@@ -318,14 +322,14 @@ namespace KNControls {
             Boolean verticalScrollBarWillBeShown = false;
 
             Rect proposedContentAreaWithScrollBars = new Rect(0,
-                   HeaderHeight + 1,
+                   HeaderHeight,
                    ActualWidth - verticalScrollbar.ActualWidth,
-                   ActualHeight - horizontalScrollbar.ActualHeight - HeaderHeight - 1.0);
+                   ActualHeight - horizontalScrollbar.ActualHeight - HeaderHeight);
 
             Rect proposedContentAreaWithoutScrollBars = new Rect(0,
-               HeaderHeight + 1,
+               HeaderHeight,
                ActualWidth,
-               ActualHeight - HeaderHeight - 1.0);
+               ActualHeight - HeaderHeight);
 
             if (VerticalScrollBarVisibility == ScrollBarVisibility.Automatic &&
                 HorizontalScrollBarVisibility == ScrollBarVisibility.Automatic) {
@@ -418,9 +422,9 @@ namespace KNControls {
             }
 
             contentArea = new Rect(0,
-                HeaderHeight + 1, 
+                HeaderHeight, 
                 ActualWidth - (verticalScrollBarWillBeShown ? verticalScrollbar.Width : 0.0), 
-                ActualHeight - (horizontalScrollBarWillBeShown ? horizontalScrollbar.Height : 0.0) - HeaderHeight - 1.0);
+                ActualHeight - (horizontalScrollBarWillBeShown ? horizontalScrollbar.Height : 0.0) - HeaderHeight);
 
             verticalScrollbar.LargeChange = contentArea.Height; 
             verticalScrollbar.Maximum = virtualHeight - contentArea.Height;

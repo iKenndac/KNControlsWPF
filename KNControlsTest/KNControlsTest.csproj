@@ -38,8 +38,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="KNFoundation, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\KNFoundation\KNFoundation\bin\Release\KNFoundation.dll</HintPath>
+      <HintPath>C:\Users\Daniel Kennett\Documents\Visual Studio Projects\KNFoundation\KNFoundation\bin\Release\KNFoundation.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Data" />
