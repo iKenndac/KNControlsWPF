@@ -54,6 +54,7 @@ namespace KNControls {
             int NumberOfItemsInTableView(KNTableView table);
             object ObjectForRow(KNTableView table, KNTableColumn column, int rowIndex);
             void CellPerformedAction(KNTableView view, KNTableColumn column, KNActionCell cell, int rowIndex);
+            bool ShouldDeleteObjectsAtRows(KNTableView table, ArrayList rowIndexes);
         }
 
         public interface KNTableViewDelegate {
@@ -478,6 +479,56 @@ namespace KNControls {
             if (e.Key == Key.PageDown) {
                 verticalScrollbar.Value += verticalScrollbar.LargeChange;
                 e.Handled = true;
+            }
+
+            if (e.Key == Key.Delete) {
+                if (DataSource != null & SelectedRows.Count > 0) {
+                    if (DataSource.ShouldDeleteObjectsAtRows(this, SelectedRows)) {
+                        // We should handle the selection
+                        if ((int)SelectedRows[0] < DataSource.NumberOfItemsInTableView(this)) {
+                            SelectRowAtIndex((int)SelectedRows[0], false);
+                        } else {
+                            SelectRowAtIndex(DataSource.NumberOfItemsInTableView(this) - 1, false);
+                        }
+                        ReloadData();
+                    }
+                    e.Handled = true;
+                }
+            }
+        }
+
+        public void SelectRowAtIndex(int rowIndex, bool extendSelection) {
+
+            if (!AllowMultipleSelection) {
+                extendSelection = false;
+            }
+
+            if (DataSource != null) {
+
+                int lastRow = DataSource.NumberOfItemsInTableView(this) - 1;
+                int firstRow = 0;
+
+                if (rowIndex >= firstRow && rowIndex <= lastRow) {
+
+                    ArrayList newSelection = new ArrayList();
+
+                    if (extendSelection) {
+                        newSelection = SelectedRows;
+                    }
+
+                    if (Delegate != null) {
+                        if (Delegate.TableViewShouldSelectRow(this, rowIndex)) {
+                            newSelection.Add(rowIndex);
+                        }
+                    } else {
+                        newSelection.Add(rowIndex);
+                    }
+                    
+                    SelectedRows = newSelection;
+                    EnsureRowIsVisible(rowIndex);
+
+                }
+
             }
 
         }

@@ -104,5 +104,9 @@ namespace KNControlsTest {
 
             return true;
         }
+
+        public bool ShouldDeleteObjectsAtRows(KNTableView table, System.Collections.ArrayList rowIndexes) {
+            return false;
+        }
     }
 }
