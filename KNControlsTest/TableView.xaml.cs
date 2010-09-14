@@ -105,6 +105,11 @@ namespace KNControlsTest {
             return true;
         }
 
+
+        public bool TableViewDelegateShouldShowContextualMenuWithObjectsAtIndexes(KNTableView table, System.Collections.ArrayList rowIndexes) {
+            return false;
+        }
+
         public bool ShouldDeleteObjectsAtRows(KNTableView table, System.Collections.ArrayList rowIndexes) {
             return false;
         }

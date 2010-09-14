@@ -61,6 +61,7 @@ namespace KNControls {
             bool TableViewShouldSelectRow(KNTableView table, int rowIndex);
             KNTableColumn.SortDirection TableViewWillSortByColumnWithSuggestedSortOrder(KNTableView table, KNTableColumn column, KNTableColumn.SortDirection suggestedNewSortOrder);
             bool TableViewDelegateShouldBeginDragOperationWithObjectsAtIndexes(KNTableView table, ArrayList rowIndexes);
+            bool TableViewDelegateShouldShowContextualMenuWithObjectsAtIndexes(KNTableView table, ArrayList rowIndexes);
         }
 
         public enum SelectionStyle {
@@ -296,6 +297,20 @@ namespace KNControls {
                 actualRowCount = DataSource.NumberOfItemsInTableView(this);
                 virtualHeight = (actualRowCount * RowHeight) + ContentPadding.Top + ContentPadding.Bottom;
 
+                // Check selections
+
+                ArrayList updatedSelection = new ArrayList(SelectedRows);
+
+                foreach (int index in SelectedRows) {
+                    if (index >= actualRowCount) {
+                        updatedSelection.Remove(index);
+                    }
+                }
+
+                if (updatedSelection.Count != SelectedRows.Count) {
+                    SelectedRows = updatedSelection;
+                }
+
             }
 
             RecalculateGeometry();
@@ -485,10 +500,12 @@ namespace KNControls {
                 if (DataSource != null & SelectedRows.Count > 0) {
                     if (DataSource.ShouldDeleteObjectsAtRows(this, SelectedRows)) {
                         // We should handle the selection
-                        if ((int)SelectedRows[0] < DataSource.NumberOfItemsInTableView(this)) {
-                            SelectRowAtIndex((int)SelectedRows[0], false);
-                        } else {
-                            SelectRowAtIndex(DataSource.NumberOfItemsInTableView(this) - 1, false);
+                        if (SelectedRows.Count > 0) {
+                            if ((int)SelectedRows[0] < DataSource.NumberOfItemsInTableView(this)) {
+                                SelectRowAtIndex((int)SelectedRows[0], false);
+                            } else {
+                                SelectRowAtIndex(DataSource.NumberOfItemsInTableView(this) - 1, false);
+                            }
                         }
                         ReloadData();
                     }
@@ -758,8 +775,6 @@ namespace KNControls {
 
             // Haha, swallow. *High five*
 
-            
-
             e.Handled = true;
             this.Focus();
             dragDecision = MouseDragDecision.NoDecisionMade;
@@ -897,6 +912,14 @@ namespace KNControls {
             }
             
             InvalidateVisual();
+
+            if (mouseEventsCellSwallowedEvents == false && e.RightButton == MouseButtonState.Pressed) {
+                if (Delegate != null) {
+                    if (Delegate.TableViewDelegateShouldShowContextualMenuWithObjectsAtIndexes(this, SelectedRows)) {
+                        selectedRowIfNoDrag = -1;
+                    }
+                }
+            }
 
         }
 
