@@ -3,13 +3,15 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Windows.Input;
 using System.Threading;
 using System.Reflection;
 
 namespace KNControls {
-    public class KNHeaderCell : KNActionCell {
+    public class KNHeaderCell : Canvas, KNActionCell {
 
         private static BitmapImage ascendingImage, descendingImage;
 
@@ -25,9 +27,27 @@ namespace KNControls {
 
         public KNTableColumn Column { get; set; }
 
-        public override void RenderInFrame(DrawingContext context, Rect frame) {
+        public KNCell Copy() {
+            return new KNHeaderCell();
+        }
 
-            Rect drawableFrame = frame;
+        public KNHeaderCell() {
+            Background = Brushes.White;
+        }
+
+        public void PrepareForRecycling() { }
+        public void PrepareForActivation() { }
+
+        protected override void OnRender(DrawingContext context) {
+
+            if (this.Width == 0.0 || this.Height == 0.0) {
+                return;
+            }
+
+            base.OnRender(context);
+
+            Rect frame = new Rect(0, 0, this.Width, this.Height);
+            Rect drawableFrame = new Rect(0,0,this.Width, this.Height);
             drawableFrame.Inflate(-.5, -.5);
 
             if (mouseDownForHeaderPress && mouseOver) {
@@ -88,7 +108,7 @@ namespace KNControls {
             
             // Text
 
-            FormattedText text = new FormattedText((string)ObjectValue,
+            FormattedText text = new FormattedText((string)KNCellDependencyProperty.GetObjectValue(this),
                 Thread.CurrentThread.CurrentCulture,
                 FlowDirection.LeftToRight,
                 font,
@@ -147,24 +167,83 @@ namespace KNControls {
             }
         }
 
-        public override bool MouseDidMoveInCell(Point relativePoint, Rect relativeFrame) {
+        protected override void OnMouseMove(MouseEventArgs e) {
 
-            if (relativeFrame.Contains(relativePoint) && !mouseOver) {
-                mouseOver = true;
-                return true;
+            Rect bounds = new Rect(0, 0, Width, Height);
+
+            if (e.LeftButton == MouseButtonState.Pressed) {
+
+                if (!mouseDownForHeaderPress) {
+                    if (Column.UserResizable) {
+
+                        double suggestedWidth = (e.GetPosition(this).X) + resizeDragOffset;
+
+                        if (suggestedWidth < Column.MinimumWidth) {
+                            suggestedWidth = Column.MinimumWidth;
+                        }
+
+                        if (suggestedWidth > Column.MaximumWidth) {
+                            suggestedWidth = Column.MaximumWidth;
+                        }
+
+                        if (Column.Width != suggestedWidth) {
+                            Column.Width = (int)suggestedWidth;
+                            InvalidateVisual();
+                            return;
+                        }
+                    }
+                } else {
+
+                    if (bounds.Contains(e.GetPosition(this)) && !mouseOver) {
+
+                        mouseOver = true;
+                        InvalidateVisual();
+                        return;
+                    }
+                }
+
+            } else {
+
+                if (bounds.Right - e.GetPosition(this).X <= KNTableColumn.kResizeAreaWidth) {
+
+                    if (Column.UserResizable) {
+                        Cursor = Cursors.SizeWE;
+                    } else {
+                        Cursor = Cursors.Arrow;
+                    }
+                } else {
+                    Cursor = Cursors.Arrow;
+                }
+
+                if (bounds.Contains(e.GetPosition(this)) && !mouseOver) {
+                    mouseOver = true;
+                    InvalidateVisual();
+                    return;
+                }
+
+                if (!bounds.Contains(e.GetPosition(this)) && mouseOver) {
+                    mouseOver = false;
+                    InvalidateVisual();
+                    return;
+                }
+
             }
-
-            if (!relativeFrame.Contains(relativePoint) && mouseOver) {
-                mouseOver = false;
-                return true;
-            }
-
-            return false;
         }
 
-        public override bool MouseDownInCell(Point relativePoint, Rect relativeFrame) {
+        protected override void OnMouseLeave(MouseEventArgs e) {
+            base.OnMouseLeave(e);
+            if (mouseOver) {
+                mouseOver = false;
+                InvalidateVisual();
+                return;
+            }
+        }
 
-            double offset = relativeFrame.Right - relativePoint.X;
+        protected override void OnMouseDown(MouseButtonEventArgs e) {
+
+            Rect bounds = new Rect(0, 0, Width, Height);
+
+            double offset = bounds.Right - e.GetPosition(this).X;
 
             if (offset <= KNTableColumn.kResizeAreaWidth) {
                 resizeDragOffset = offset;
@@ -172,59 +251,32 @@ namespace KNControls {
                 mouseDownForHeaderPress = true;
             }
 
-            return true;
+            InvalidateVisual();
+
+            e.Handled = true;
+            this.CaptureMouse();
         }
 
-        public override bool MouseDraggedInCell(Point relativePoint, Rect relativeFrame) {
+        protected override void OnMouseUp(MouseButtonEventArgs e) {
 
-            if (!mouseDownForHeaderPress) {
-                if (Column.UserResizable) {
+            Rect bounds = new Rect(0, 0, Width, Height);
 
-                    double suggestedWidth = (relativePoint.X - relativeFrame.X) + resizeDragOffset;
-
-                    if (suggestedWidth < Column.MinimumWidth) {
-                        suggestedWidth = Column.MinimumWidth;
-                    }
-
-                    if (suggestedWidth > Column.MaximumWidth) {
-                        suggestedWidth = Column.MaximumWidth;
-                    }
-
-                    if (Column.Width != suggestedWidth) {
-                        Column.Width = (int)suggestedWidth;
-                        return true;
-                    }
-                }
-            } else {
-                if (relativeFrame.Contains(relativePoint) && !mouseOver) {
-                    mouseOver = true;
-                    return true;
-                }
-
-                if (!relativeFrame.Contains(relativePoint) && mouseOver) {
-                    mouseOver = false;
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        public override bool MouseUpInCell(Point relativePoint, Rect relativeFrame) {
-
-            if (relativeFrame.Contains(relativePoint)) {
+            if (bounds.Contains(e.GetPosition(this))) {
                 if (mouseDownForHeaderPress) {
 
                     // Clicked! Do something...
 
-                    if (Delegate != null) {
-                        Delegate.CellPerformedAction(this);
+                    if (KNActionCellDependencyProperty.GetDelegate(this) != null) {
+                        KNActionCellDependencyProperty.GetDelegate(this).CellPerformedAction(this);
                     }
                 }
             }
             mouseDownForHeaderPress = false;
-            return false;
+            InvalidateVisual();
+            e.Handled = true;
+            this.ReleaseMouseCapture();
         }
+
 
     }
 }

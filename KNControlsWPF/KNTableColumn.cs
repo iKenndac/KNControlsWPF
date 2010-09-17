@@ -1,11 +1,15 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Windows;
+using System.Windows.Media;
+using System.Windows.Controls;
 using KNFoundation.KNKVC;
 
 namespace KNControls {
-    public class KNTableColumn : KNActionCellDelegate {
+    public class KNTableColumn : Canvas, KNActionCellDelegate, KNKVOObserver {
 
         public const double kResizeAreaWidth = 10.0;
 
@@ -22,38 +26,57 @@ namespace KNControls {
 
         public interface KNTableColumnDelegate {
             void ActionCellPerformedAction(KNActionCell cell, KNTableColumn column);
+            object ObjectForRow(int row, KNTableColumn column);
+            int RowCountForColumn(KNTableColumn column);
             void HeaderWasClicked(KNTableColumn column);
         }
 
-        private KNCell cell;
-        private KNHeaderCell headerCell;
-        private int width;
-        private string identifier;
+        private double rowHeight;
+        private double scrollOffset;
+        private double headerHeight;
+        private Thickness contentPadding;
 
+        private KNCell dataCell;
+        private KNHeaderCell headerCell;
+        
+        private string identifier;
+        
         private bool userResizable;
-        private int minSize;
-        private int maxSize;
+        private double minSize;
+        private double maxSize;
         private SortPriority sortPriority;
         private SortDirection sortDirection;        
 
         private KNTableColumnDelegate del;
 
-        private Dictionary<int, KNCell> cells;
+        private ArrayList cellCache;
+        private Dictionary<int, KNCell> activeCells;
+
+        // --
+
 
         public KNTableColumn() {
 
-            cells = new Dictionary<int, KNCell>();
+            ClipToBounds = true;
+
+            activeCells = new Dictionary<int, KNCell>();
+            cellCache = new ArrayList();
+
             sortPriority = SortPriority.NotUsed;
             sortDirection = SortDirection.Ascending;
-            cell = new KNTextCell();
-            width = 100;
+            dataCell = new KNTextCell();
             minSize = 100;
             maxSize = 2000;
+            Width = 100;
             userResizable = true;
-            headerCell = new KNHeaderCell();
+            HeaderCell = new KNHeaderCell();
             headerCell.Column = this;
-            headerCell.Delegate = this;
-            headerCell.ObjectValue = "Column Title";
+
+            KNActionCellDependencyProperty.SetDelegate((DependencyObject)headerCell, this);
+            KNCellDependencyProperty.SetObjectValue((DependencyObject)headerCell, "Column Title");
+
+            this.AddObserverToKeyPathWithOptions(this, "VerticalOffset", 0, null);
+            this.AddObserverToKeyPathWithOptions(this, "RowHeight", 0, null);
 
         }
 
@@ -62,34 +85,85 @@ namespace KNControls {
 
             identifier = anIdentifier;
             if (aDataCell != null) {
-                cell = aDataCell;
+                dataCell = aDataCell;
             }
             del = aDelegate;
-            headerCell.ObjectValue = aTitle;
+            KNCellDependencyProperty.SetObjectValue((DependencyObject)headerCell, aTitle);
         }
 
-        public KNCell CellForRow(int row) {
-
-            if (!cells.ContainsKey(row)) {
-
-                KNCell newCell = cell.Copy();
-
-                if (typeof(KNActionCell).IsAssignableFrom(newCell.GetType())) {
-                    ((KNActionCell)newCell).Delegate = this;
-                }
-
-                cells.Add(row, newCell);
+        public void ObserveValueForKeyPathOfObject(string keyPath, object obj, Dictionary<string, object> change, object context) {
+            if (keyPath.Equals("VerticalOffset") || keyPath.Equals("RowHeight")) {
+                LayoutCompletely();
             }
-            return cells[row];
         }
+
+        private void RecycleCellAtRow(int rowIndex) {
+            // This should get called when a cell is scrolled off-screen. 
+            // The cell will be cached for later use.
+
+            if (activeCells.ContainsKey(rowIndex)) {
+                KNCell cell = activeCells[rowIndex];
+                activeCells.Remove(rowIndex);
+                Children.Remove((UIElement)cell);
+                if (typeof(KNActionCell).IsAssignableFrom(cell.GetType())) {
+                    KNActionCellDependencyProperty.SetDelegate((DependencyObject)cell, null);
+                }
+                KNCellDependencyProperty.SetObjectValue((DependencyObject)cell, null);
+                cell.PrepareForRecycling();
+
+                cellCache.Add(cell);
+            }
+        }
+
+        public KNCell CellForRow(int rowIndex) {
+
+            if (activeCells.ContainsKey(rowIndex)) {
+                return activeCells[rowIndex];
+            }
+
+            if (cellCache.Count > 0) {
+                KNCell cachedCell = (KNCell)cellCache[0];
+                Canvas.SetZIndex((UIElement)cachedCell, 0);
+                activeCells.Add(rowIndex, cachedCell);
+                cellCache.RemoveAt(0);
+                cachedCell.PrepareForActivation();
+                Children.Add((UIElement)cachedCell);
+                return cachedCell;
+            }
+
+            KNCell cell = dataCell.Copy();
+            activeCells.Add(rowIndex, cell);
+            Canvas.SetZIndex((UIElement)cell, 0);
+            cell.PrepareForActivation();
+            Children.Add((UIElement)cell);
+
+            if (typeof(KNActionCell).IsAssignableFrom(cell.GetType())) {
+                KNActionCellDependencyProperty.SetDelegate((DependencyObject)cell, this);
+            }
+
+            return cell;
+        }
+
+        private void PrepareForNewRowRange(int firstRow, int lastRow) {
+            // Cache active cells that fall outside this range. 
+
+            ArrayList keys = new ArrayList(activeCells.Keys);
+
+            foreach (int rowIndex in keys) {
+                if (rowIndex < firstRow || rowIndex > lastRow) {
+                    RecycleCellAtRow(rowIndex);
+                }
+            }
+        }
+       
 
         public int RowForCell(KNCell cell) {
 
-            if (!cells.ContainsValue(cell)) {
+            if (!activeCells.ContainsValue(cell)) {
                 return -1;
             } else {
-                foreach (int row in cells.Keys) {
-                    if (cells[row].Equals(cell)) {
+                foreach (int row in activeCells.Keys) {
+                    if (activeCells[row].Equals(cell)) {
                         return row;
                     }
                 }
@@ -113,22 +187,88 @@ namespace KNControls {
             }
         }
 
-        // -----
+        public void ReloadData() {
+            LayoutCompletely();
+        }
 
-        public int Width {
-            get { return width; }
+        protected override void OnRenderSizeChanged(SizeChangedInfo sizeInfo) {
+            base.OnRenderSizeChanged(sizeInfo);
+
+            if (sizeInfo.WidthChanged && !sizeInfo.HeightChanged) {
+                LayoutHorizontal();
+            } else if (sizeInfo.HeightChanged) {
+                LayoutCompletely();
+            }
+        }
+
+        private void LayoutHorizontal() {
+            // Nice and simple - make sure everything is the right width.
+
+            HeaderCell.Width = this.Width;
+
+            foreach (FrameworkElement cell in activeCells.Values) {
+                cell.Width = this.Width;
+            }
+        }
+
+        private void LayoutCompletely() {
+            // More complex - make sure all cells are correctly positioned.
+
+            // Header isn't affected by scroll position.
+
+
+            HeaderCell.Height = HeaderHeight;
+            HeaderCell.Width = Width;
+
+            int firstRow = (int)Math.Floor((VerticalOffset - ContentPadding.Top) / RowHeight);
+            if (firstRow < 0) { firstRow = 0; }
+
+            double firstRowOffset = ((firstRow * RowHeight) - VerticalOffset) + ContentPadding.Top + HeaderCell.Height;
+            int visibleRowCount = (int)Math.Ceiling((Height - firstRowOffset) / RowHeight);
+            int lastRow = firstRow + visibleRowCount;
+
+            if (Delegate != null) {
+                int lastAvailableRow = Delegate.RowCountForColumn(this) - 1;
+                if (lastRow > lastAvailableRow) {
+                    lastRow = lastAvailableRow;
+                }
+            } else {
+                lastRow = 0;
+            }
+
+            visibleRowCount = lastRow - firstRow;
+
+            PrepareForNewRowRange(firstRow, lastRow);
+
+            for (int currentVisibleRowIndex = 0; currentVisibleRowIndex <= visibleRowCount; currentVisibleRowIndex++) {
+
+                int currentActualRow = firstRow + currentVisibleRowIndex;
+
+                KNCell cell = CellForRow(currentActualRow);
+                Canvas.SetTop((UIElement)cell, firstRowOffset + (currentVisibleRowIndex * RowHeight));
+                ((FrameworkElement)cell).Height = RowHeight;
+                ((FrameworkElement)cell).Width = Width;
+
+                if (Delegate != null) {
+                    KNCellDependencyProperty.SetObjectValue((DependencyObject)cell, Delegate.ObjectForRow(currentActualRow, this));
+                }
+            } 
+        }
+
+        public new double Width {
+            get { return base.Width; }
             set {
                 this.WillChangeValueForKey("Width");
-                width = value;
+                base.Width = value;
                 this.DidChangeValueForKey("Width");
             }
         }
 
         public KNCell DataCell {
-            get { return cell; }
+            get { return dataCell; }
             set {
                 this.WillChangeValueForKey("DataCell");
-                cell = value;
+                dataCell = value;
                 this.DidChangeValueForKey("DataCell");
             }
         }
@@ -148,12 +288,16 @@ namespace KNControls {
                 this.WillChangeValueForKey("HeaderCell");
 
                 if (headerCell != null) {
+                    Children.Remove(headerCell);
                     headerCell.Column = null;
-                    headerCell.Delegate = null;
+                    KNActionCellDependencyProperty.SetDelegate((DependencyObject)headerCell, null);
                 }
                 headerCell = value;
                 headerCell.Column = this;
-                headerCell.Delegate = this;
+                headerCell.Width = Width;
+                Canvas.SetZIndex(headerCell, 999);
+                Children.Add(headerCell);
+                KNActionCellDependencyProperty.SetDelegate((DependencyObject)headerCell, null);
             }
         }
 
@@ -166,7 +310,25 @@ namespace KNControls {
             }
         }
 
-        public int MinimumWidth {
+        public double RowHeight {
+            get { return rowHeight; }
+            set {
+                this.WillChangeValueForKey("RowHeight");
+                rowHeight = value;
+                this.DidChangeValueForKey("RowHeight");
+            }
+        }
+
+        public double HeaderHeight {
+            get { return headerHeight; }
+            set {
+                this.WillChangeValueForKey("HeaderHeight");
+                headerHeight = value;
+                this.DidChangeValueForKey("HeaderHeight");
+            }
+        }
+
+        public double MinimumWidth {
             get { return minSize; }
             set {
                 this.WillChangeValueForKey("MinimumWidth");
@@ -175,12 +337,30 @@ namespace KNControls {
             }
         }
 
-        public int MaximumWidth {
+        public double MaximumWidth {
             get { return maxSize; }
             set {
                 this.WillChangeValueForKey("MaximumWidth");
                 maxSize = value;
                 this.DidChangeValueForKey("MaximumWidth");
+            }
+        }
+
+        public double VerticalOffset {
+            get { return scrollOffset; }
+            set {
+                this.WillChangeValueForKey("VerticalOffset");
+                scrollOffset = value;
+                this.DidChangeValueForKey("VerticalOffset");
+            }
+        }
+
+        public  Thickness ContentPadding {
+            get { return contentPadding; }
+            set {
+                this.WillChangeValueForKey("ContentPadding");
+                contentPadding = value;
+                this.DidChangeValueForKey("ContentPadding");
             }
         }
 
@@ -210,5 +390,7 @@ namespace KNControls {
                 this.DidChangeValueForKey("Delegate");
             }
         }
+
+        
     }
 }

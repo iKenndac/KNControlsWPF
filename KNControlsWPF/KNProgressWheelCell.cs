@@ -4,7 +4,10 @@ using System.Linq;
 using System.Text;
 using System.Windows.Media;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Threading;
+
+using KNFoundation;
 
 namespace KNControls {
 
@@ -13,7 +16,49 @@ namespace KNControls {
         Small = 1
     }
 
-    public class KNProgressWheelCell : KNCell {
+    public class KNProgressWheelCell : Canvas, KNCell {
+
+        private const string kProgressCellShouldRedrawNotification = "kProgressCellShouldRedrawNotification";
+
+        private static TimeSpan kTickDuration = TimeSpan.FromSeconds(0.5 / 12);
+        private static DispatcherTimer timer;
+        private static int wheelCount = 0;
+        private static double leadBarAngle = 0.0;
+
+        private static void AddWheel() {
+            wheelCount++;
+
+            if (wheelCount > 0 && timer == null) {
+                timer = new DispatcherTimer(DispatcherPriority.Send);
+                timer.Interval = kTickDuration;
+                timer.Tick += TimerTicked;
+                timer.Start();
+            }
+        }
+
+        private static void RemoveWheel() {
+            if (wheelCount > 0) {
+                wheelCount--;
+            }
+
+            if (wheelCount == 0) {
+                if (timer != null) {
+                    timer.IsEnabled = false;
+                    timer.Stop();
+                    timer = null;
+                }
+            }
+        }
+
+        private static void TimerTicked(object sender, EventArgs e) {
+            leadBarAngle += 30.0;
+
+            if (leadBarAngle >= 360.0) {
+                leadBarAngle -= 360.0;
+            }
+
+            KNNotificationCentre.SharedCentre().PostNotificationWithName(kProgressCellShouldRedrawNotification, null);
+        }
 
         private const double kRegularWidth = 32.0;
         private const double kSmallWidth = 16.0;
@@ -21,34 +66,32 @@ namespace KNControls {
         private Size kSmallBarSize = new Size(1.5, 5.0);
         private Color kBarColor = Color.FromRgb(25, 25, 25);
         private byte kMinAlpha = 30;
-        private TimeSpan kTickDuration = TimeSpan.FromSeconds(0.5 / 12);
-        private DispatcherTimer timer;
+       
 
-        public override KNCell Copy() {
+        public KNCell Copy() {
             return new KNProgressWheelCell();
         }
 
-        public KNProgressWheelCell() {
-
-            timer = new DispatcherTimer(DispatcherPriority.Send);
-            timer.Interval = kTickDuration;
-            timer.Tick += TimerTicked;
-            timer.Start();
+        public KNProgressWheelCell() { 
         }
 
-        private void TimerTicked(object sender, EventArgs e) {
-            leadBarAngle += 30.0;
-
-            if (leadBarAngle >= 360.0) {
-                leadBarAngle -= 360.0;
-            }
-
-            if (ParentControl != null) {
-                ParentControl.UpdateCell(this);
-            }
+        public void PrepareForRecycling() {
+            KNNotificationCentre.SharedCentre().RemoveObserver(this);
+            RemoveWheel();
         }
 
-        public override void RenderInFrame(DrawingContext context, Rect frame) {
+        public void PrepareForActivation() {
+            KNNotificationCentre.SharedCentre().AddObserverForNotificationName(new KNNotificationDelegate(ProgressTimerDidTick), kProgressCellShouldRedrawNotification);
+            AddWheel();
+        }
+
+        private void ProgressTimerDidTick(KNNotification notification) {
+            InvalidateVisual();
+        }
+
+        protected override void OnRender(DrawingContext context) {
+
+            Rect frame = new Rect(0, 0, Width, Height);
 
             Rect drawingFrame;
             ControlSize effectiveSize;
@@ -93,7 +136,7 @@ namespace KNControls {
             }
         }
 
-        double leadBarAngle = 0.0;
+        
 
         private Color ColorForBarAtDegrees(double degrees) {
 

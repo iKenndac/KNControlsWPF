@@ -6,6 +6,6 @@
              mc:Ignorable="d" 
              d:DesignHeight="300" d:DesignWidth="300" xmlns:my="clr-namespace:KNControls;assembly=KNControls">
     <Grid>
-        <my:KNTableView Name="kNTableView1" />
+        <my:KNTableView Name="kNTableView1"></my:KNTableView>
     </Grid>
 </UserControl>

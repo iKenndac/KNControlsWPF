@@ -3,20 +3,25 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
 
 namespace KNControls {
-    public class KNImageCell : KNCell {
+    public class KNImageCell : Canvas, KNCell {
 
-        public override KNCell Copy() {
+        public KNCell Copy() {
             return new KNImageCell();
         }
 
-        public override void RenderInFrame(DrawingContext context, Rect frame) {
+        public void PrepareForRecycling() { }
+        public void PrepareForActivation() { }
 
-            ImageSource image = (ImageSource)ObjectValue;
+        protected override void OnRender(DrawingContext context) {
+
+            Rect frame = new Rect(0, 0, Width, Height);
+            ImageSource image = (ImageSource)KNCellDependencyProperty.GetObjectValue(this);
 
             if (image != null) {
 

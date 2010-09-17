@@ -3,31 +3,82 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Windows.Media.Imaging;
-using System.Windows.Forms;
 using System.Drawing;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Forms.VisualStyles;
 using KNFoundation;
+using KNFoundation.KNKVC;
 
 namespace KNControls {
-    public class KNCheckboxCell : KNActionCell {
+    public class KNCheckboxCell : Canvas, KNActionCell, KNKVOObserver {
 
-        private static BitmapSource checkBoxOff, checkBoxOn, checkBoxOffOver, checkBoxOnOver, checkBoxOffDown, checkBoxOnDown;
+        private CheckBox checkBox;
 
-        private Rect drawnCheckRelativeFrame;
-        private BitmapSource checkBoxImage;
-        private bool mouseOverCheck;
+        public void PrepareForRecycling() {}
+        public void PrepareForActivation() {}
 
-        
+        public KNCell Copy() {
+            return new KNCheckboxCell();
+        }
 
-        public override void RenderInFrame(System.Windows.Media.DrawingContext context, System.Windows.Rect frame) {
+        public KNCheckboxCell() {
+            checkBox = new CheckBox();
+            checkBox.Width = 13.0;
+            checkBox.Height = 13.0;
+            checkBox.Checked += CheckBoxWasChecked;
+            checkBox.Unchecked += CheckBoxWasUnchecked;
+            Children.Add(checkBox);
+
+            this.AddObserverToKeyPathWithOptions(this, "ObjectValue", 0, null);
+        }
+
+        private void CheckBoxWasChecked(object sender, EventArgs e) {
+            
+            KNCellDependencyProperty.SetObjectValue(this, true);
+            if (KNActionCellDependencyProperty.GetDelegate(this) != null) {
+                KNActionCellDependencyProperty.GetDelegate(this).CellPerformedAction(this);
+            }
+        }
+
+        private void CheckBoxWasUnchecked(object sender, EventArgs e) {
+
+            KNCellDependencyProperty.SetObjectValue(this, false);
+            if (KNActionCellDependencyProperty.GetDelegate(this) != null) {
+                KNActionCellDependencyProperty.GetDelegate(this).CellPerformedAction(this);
+            }
+        }
+
+        protected override void OnRenderSizeChanged(SizeChangedInfo sizeInfo) {
+            base.OnRenderSizeChanged(sizeInfo);
+
+            Canvas.SetTop(checkBox, (sizeInfo.NewSize.Height / 2) - (checkBox.Height / 2));
+            Canvas.SetLeft(checkBox, (sizeInfo.NewSize.Width / 2) - (checkBox.Width / 2));
+        }
+
+        public void ObserveValueForKeyPathOfObject(string keyPath, object obj, Dictionary<string, object> change, object context) {
+            if (keyPath.Equals("ObjectValue")) {
+                checkBox.IsChecked = ObjectValue();
+            }
+        }
+
+        private bool ObjectValue() {
+            if (KNCellDependencyProperty.GetObjectValue(this) == null) {
+                return false;
+            } else {
+                return (bool)KNCellDependencyProperty.GetObjectValue(this);
+            }
+        }
+
+        /*
+        public void RenderInFrame(System.Windows.Media.DrawingContext context, System.Windows.Rect frame) {
 
             if (checkBoxOff == null) {
                 DrawCheckBoxes();
             }
-
+            
             if (checkBoxImage == null) {
-                checkBoxImage = (bool)ObjectValue ? checkBoxOn : checkBoxOff;
+                checkBoxImage = (bool)KNCellDependencyProperty.GetObjectValue(this) ? checkBoxOn : checkBoxOff;
             }
 
             Rect checkBoxRect = new Rect(Math.Floor(frame.X + ((frame.Width / 2) - (checkBoxImage.Width / 2))),
@@ -45,44 +96,44 @@ namespace KNControls {
         
         }
 
-        public override bool MouseDidMoveInCell(System.Windows.Point relativePoint, Rect relativeFrame) {
+        public bool MouseDidMoveInCell(System.Windows.Point relativePoint, Rect relativeFrame) {
 
             if (drawnCheckRelativeFrame.Contains(relativePoint) && !mouseOverCheck) {
                 mouseOverCheck = true;
-                checkBoxImage = (bool)ObjectValue ? checkBoxOnOver : checkBoxOffOver;
+                checkBoxImage = (bool)KNCellDependencyProperty.GetObjectValue(this) ? checkBoxOnOver : checkBoxOffOver;
                 return true;
             }
 
             if (!drawnCheckRelativeFrame.Contains(relativePoint) && mouseOverCheck) {
                 mouseOverCheck = false;
-                checkBoxImage = (bool)ObjectValue ? checkBoxOn : checkBoxOff;
+                checkBoxImage = (bool)KNCellDependencyProperty.GetObjectValue(this) ? checkBoxOn : checkBoxOff;
                 return true;
             }
 
             return false;
         }
 
-        public override bool MouseDownInCell(System.Windows.Point relativePoint, Rect relativeFrame) {
+        public bool MouseDownInCell(System.Windows.Point relativePoint, Rect relativeFrame) {
 
             if (drawnCheckRelativeFrame.Contains(relativePoint)) {
                 mouseOverCheck = true;
-                checkBoxImage = (bool)ObjectValue ? checkBoxOnDown : checkBoxOffDown;
+                checkBoxImage = (bool)KNCellDependencyProperty.GetObjectValue(this) ? checkBoxOnDown : checkBoxOffDown;
                 return true;
             }
             return false;
         }
 
-        public override bool MouseDraggedInCell(System.Windows.Point relativePoint, Rect relativeFrame) {
+        public bool MouseDraggedInCell(System.Windows.Point relativePoint, Rect relativeFrame) {
 
             if (drawnCheckRelativeFrame.Contains(relativePoint) && !mouseOverCheck) {
                 mouseOverCheck = true;
-                checkBoxImage = (bool)ObjectValue ? checkBoxOnDown : checkBoxOffDown;
+                checkBoxImage = (bool)KNCellDependencyProperty.GetObjectValue(this) ? checkBoxOnDown : checkBoxOffDown;
                 return true;
             }
 
             if (!drawnCheckRelativeFrame.Contains(relativePoint) && mouseOverCheck) {
                 mouseOverCheck = false;
-                checkBoxImage = (bool)ObjectValue ? checkBoxOnOver : checkBoxOffOver;
+                checkBoxImage = (bool)KNCellDependencyProperty.GetObjectValue(this) ? checkBoxOnOver : checkBoxOffOver;
                 return true;
             }
 
@@ -90,19 +141,19 @@ namespace KNControls {
 
         }
 
-        public override bool MouseUpInCell(System.Windows.Point relativePoint, Rect relativeFrame) {
+        public bool MouseUpInCell(System.Windows.Point relativePoint, Rect relativeFrame) {
 
             if (drawnCheckRelativeFrame.Contains(relativePoint)) {
                 mouseOverCheck = true;
-                ObjectValue = !(bool)ObjectValue;
-                if (Delegate != null) {
-                    Delegate.CellPerformedAction(this);
+                KNCellDependencyProperty.SetObjectValue(this, !(bool)KNCellDependencyProperty.GetObjectValue(this));
+                if (KNActionCellDependencyProperty.GetDelegate(this) != null) {
+                    KNActionCellDependencyProperty.GetDelegate(this).CellPerformedAction(this);
                 }
-                checkBoxImage = (bool)ObjectValue ? checkBoxOnOver : checkBoxOffOver;
+                checkBoxImage = (bool)KNCellDependencyProperty.GetObjectValue(this) ? checkBoxOnOver : checkBoxOffOver;
                 return true;
 
             } else {
-                checkBoxImage = (bool)ObjectValue ? checkBoxOn : checkBoxOff;
+                checkBoxImage = (bool)KNCellDependencyProperty.GetObjectValue(this) ? checkBoxOn : checkBoxOff;
                 mouseOverCheck = false;
                 return true;
             }
@@ -163,10 +214,8 @@ namespace KNControls {
 
 
         }
-
-        public override KNCell Copy() {
-            return new KNCheckboxCell();
-        }
+          
+         */
 
     }
 }

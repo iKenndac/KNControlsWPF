@@ -5,24 +5,18 @@ using System.Text;
 using System.Windows.Media;
 using System.Windows;
 using System.Threading;
+using System.Windows.Controls;
 using KNFoundation.KNKVC;
 
 namespace KNControls {
-    public class KNTextCell : KNCell, KNKVOObserver {
+    public class KNTextCell : DockPanel, KNCell, KNKVOObserver {
 
-        private FormattedText formattedText;
-        private Rect lastFrame = Rect.Empty;
-        private Point lastTextPoint;
+        private TextBlock textBlock;
 
         public KNTextCell() {
 
-            TextFont = new Typeface("Segoe UI");
-            TextAlignment = TextAlignment.Left;
-            TextSize = 11.75;
-            HorizontalPadding = 5.0;
-            
-            TextColor = Colors.Black;
-            HighlightedTextColor = Colors.Black;
+            textBlock = new TextBlock();
+            this.Children.Add(textBlock);
 
             this.AddObserverToKeyPathWithOptions(this, "TextFont", 0, null);
             this.AddObserverToKeyPathWithOptions(this, "TextAlignment", 0, null);
@@ -30,44 +24,55 @@ namespace KNControls {
             this.AddObserverToKeyPathWithOptions(this, "TextColor", 0, null);
             this.AddObserverToKeyPathWithOptions(this, "HighlightedTextColor", 0, null);
             this.AddObserverToKeyPathWithOptions(this, "ObjectValue", 0, null);
+
+            TextFont = new FontFamily("Segoe UI");
+            TextAlignment = TextAlignment.Left;
+            TextSize = 11.75;
+            HorizontalPadding = 5.0;
+
+            textBlock.VerticalAlignment = System.Windows.VerticalAlignment.Center;
+            
+            TextColor = Colors.Black;
+            HighlightedTextColor = Colors.Black;
+
         }
+
+        public void PrepareForRecycling() {}
+        public void PrepareForActivation() {}
 
         public void ObserveValueForKeyPathOfObject(string keyPath, object obj, Dictionary<string, object> change, object context) {
-            formattedText = null;
-            lastFrame = Rect.Empty;
-        }
-
-        public override void RenderInFrame(DrawingContext context, Rect frame) {
-
-            if (ObjectValue != null && ObjectValue.GetType().Equals(typeof(String))) {
-
-                if (formattedText == null) {
-                    formattedText = new FormattedText((string)ObjectValue,
-                       Thread.CurrentThread.CurrentCulture,
-                       FlowDirection.LeftToRight,
-                       TextFont,
-                       TextSize,
-                       new SolidColorBrush(Highlighted ? HighlightedTextColor : TextColor));
-                    
-                    formattedText.TextAlignment = TextAlignment;
-                }
-
-                if (lastFrame.IsEmpty || lastFrame != frame) {
-                    lastFrame = frame;
-
-                    formattedText.MaxTextWidth = frame.Width - HorizontalPadding * 2;
-                    formattedText.MaxTextHeight = frame.Height;
-
-                    double textHeight = formattedText.Height;
-                    lastTextPoint = new Point(frame.X + HorizontalPadding, frame.Y + ((frame.Height / 2) - (textHeight / 2)));
-                }
-
-                context.DrawText(formattedText, lastTextPoint);
-
+            
+            if (keyPath.Equals("TextFont")) {
+                textBlock.FontFamily = TextFont;
             }
+
+            if (keyPath.Equals("TextAlignment")) {
+                textBlock.TextAlignment = TextAlignment;
+            }
+
+            if (keyPath.Equals("TextColor")) {
+                textBlock.Foreground = new SolidColorBrush(TextColor);
+            }
+
+            if (keyPath.Equals("HorizontalPadding")) {
+                textBlock.Margin = new Thickness(HorizontalPadding, 0, HorizontalPadding, 0);
+            }
+
+            if (keyPath.Equals("ObjectValue")) {
+                textBlock.Text = (string)KNCellDependencyProperty.GetObjectValue(this);
+            }
+
         }
 
-        public override KNCell Copy() {
+        public object ObjectValue() {
+            return KNCellDependencyProperty.GetObjectValue(this);
+        }
+
+        protected override void OnRenderSizeChanged(SizeChangedInfo sizeInfo) {
+            base.OnRenderSizeChanged(sizeInfo);
+        }
+
+        public KNCell Copy() {
             KNTextCell cell = new KNTextCell();
             cell.TextAlignment = this.TextAlignment;
             cell.TextSize = this.TextSize;
@@ -82,7 +87,7 @@ namespace KNControls {
 
         private TextAlignment alignment;
         private double size;
-        private Typeface font;
+        private FontFamily font;
         private Color color;
         private Color highlightedColor;
         private double horizontalPadding;
@@ -120,7 +125,7 @@ namespace KNControls {
             }
         }
 
-        public Typeface TextFont {
+        public FontFamily TextFont {
             get { return font; }
             set {
                 if (font != value) {

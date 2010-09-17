@@ -4,6 +4,8 @@
         xmlns:MyNamespace="clr-namespace:KNControls;assembly=KNControls"
         Title="MainWindow" Height="350" Width="531" xmlns:my="clr-namespace:KNControls;assembly=KNControls">
     <Grid>
-        <my:KNTabView Name="kNTabView1" Margin="-3,0,-3,-3" />
+        <my:KNTabView Name="kNTabView1" Margin="-3,0,-3,-3">
+            <TextBlock Canvas.Left="266" Canvas.Top="166" Height="23" Name="textBlock1" Text="TextBlock" />
+        </my:KNTabView>
     </Grid>
 </Window>

@@ -45,7 +45,7 @@ namespace KNControls {
     ///     <MyNamespace:KNTableView/>
     ///
     /// </summary>
-    public class KNTableView : Canvas, KNCell.KNCellContainer, KNTableColumn.KNTableColumnDelegate, KNKVOObserver {
+    public class KNTableView : Canvas, KNCellContainer, KNTableColumn.KNTableColumnDelegate, KNKVOObserver {
         static KNTableView() {
             DefaultStyleKeyProperty.OverrideMetadata(typeof(KNTableView), new FrameworkPropertyMetadata(typeof(KNTableView)));
         }
@@ -76,18 +76,160 @@ namespace KNControls {
             Automatic = 2
         }
 
+        private const string kColumnWidthKVOContext = "kColumnWidthKVOContext";
+        private const int kBackgroundZIndex = 10;
+        private const int kSelectionZIndex = 20;
+        private const int kContentZIndex = 30;
+        private const int kOverlayZIndex = 999;
+        //IVARS
+
+        ScrollBar verticalScrollbar;
+        ScrollBar horizontalScrollbar;
+        double headerHeight;
+        double rowHeight;
+        ScrollBarVisibility horizontalScrollbarVisibility;
+        ScrollBarVisibility verticalScrollbarVisibility;
+        ArrayList visibleColumns = new ArrayList();
+        ArrayList selectionLayers = new ArrayList();
+        private KNTableColumn[] columns;
+        StackPanel columnStack;
+        private Thickness contentPadding;
+
+        private int actualRowCount = 0;
+        private double virtualHeight = 0.0;
+        private double virtualWidth = 0.0;
+        Rect availableContentArea = Rect.Empty;
+
+        public KNTableView() {
+
+            this.Focusable = true;
+            this.Focus();
+            this.ClipToBounds = true;
+            this.SnapsToDevicePixels = true;
+
+            columnStack = new StackPanel();
+            columnStack.Orientation = Orientation.Horizontal;
+            Canvas.SetZIndex(columnStack, kContentZIndex);
+            columnStack.ClipToBounds = true;
+
+            Children.Add(columnStack);
+
+            AllowMultipleSelection = true;
+
+            verticalScrollbar = new ScrollBar();
+            horizontalScrollbar = new ScrollBar();
+
+            Canvas.SetZIndex(verticalScrollbar, kOverlayZIndex);
+            Canvas.SetZIndex(horizontalScrollbar, kOverlayZIndex);
+
+            verticalScrollbar.ValueChanged += VerticalScrollbarDidScroll;
+            horizontalScrollbar.ValueChanged += HorizontalScrollBarDidScroll;
+
+            verticalScrollbar.Width = 18.0;
+            horizontalScrollbar.Height = 18.0;
+            horizontalScrollbar.Orientation = Orientation.Horizontal;
+
+            Children.Add(verticalScrollbar);
+            Children.Add(horizontalScrollbar);
+
+            Canvas.SetBottom(horizontalScrollbar, 0.0);
+            Canvas.SetRight(verticalScrollbar, 0.0);
+
+            BackgroundColor = Colors.White;
+            SelectedRows = new ArrayList();
+            RowHeight = 22.0;
+            Columns = new KNTableColumn[] {};
+            AlternateRowColor = Color.FromRgb(237, 243, 254);
+
+            HeaderHeight = 24.0;
+            RowSelectionStyle = SelectionStyle.WindowsExplorer;
+
+            horizontalScrollbar.SmallChange = RowHeight;
+
+            VerticalScrollBarVisibility = ScrollBarVisibility.Automatic;
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Automatic;
+
+            ContentPadding = new Thickness(20.0);
+
+            this.AddObserverToKeyPathWithOptions(this, "HeaderHeight", 0, null);
+            this.AddObserverToKeyPathWithOptions(this, "VerticalScrollBarVisibility", 0, null);
+            this.AddObserverToKeyPathWithOptions(this, "HorizontalScrollBarVisibility", 0, null);
+            this.AddObserverToKeyPathWithOptions(this, "ContentPadding", 0, null);
+            this.AddObserverToKeyPathWithOptions(this, "RowHeight", 0, null);
+            this.AddObserverToKeyPathWithOptions(this, "SelectedRows", 0, null);
+
+            this.AddObserverToKeyPathWithOptions(this,
+                "Columns",
+                KNKeyValueObservingOptions.KNKeyValueObservingOptionNew | KNKeyValueObservingOptions.KNKeyValueObservingOptionOld,
+                null);
+        }
+
+        #region Delegates
+
         public void ObserveValueForKeyPathOfObject(string keyPath, object obj, Dictionary<string, object> change, object context) {
-            if (keyPath.Equals("Width") || keyPath.Equals("HeaderHeight") || keyPath.Equals("VerticalScrollBarVisibility") || keyPath.Equals("HorizontalScrollBarVisibility")) {
-                RecalculateGeometry();
+
+            if (context != null && context.Equals(kColumnWidthKVOContext)) {
+                RebuildBasicLayout();
+                RebuildColumnLayout();
+                return;
             }
+
+            if (keyPath.Equals("SelectedRows")) {
+                RebuildSelectionLayout();
+            }
+
+            if (keyPath.Equals("HeaderHeight")) {
+                foreach (KNTableColumn column in Columns) {
+                    column.HeaderHeight = HeaderHeight;
+                }
+            }
+
+            if (keyPath.Equals("RowHeight")) {
+                foreach (KNTableColumn column in Columns) {
+                    column.RowHeight = RowHeight;
+                }
+            }
+
+            if (keyPath.Equals("ContentPadding")) {
+                foreach (KNTableColumn column in Columns) {
+                    column.RowHeight = RowHeight;
+                }
+            }
+
+            if (keyPath.Equals("ContentPadding") || keyPath.Equals("Width") || keyPath.Equals("RowHeight") || keyPath.Equals("HeaderHeight") || keyPath.Equals("VerticalScrollBarVisibility") || keyPath.Equals("HorizontalScrollBarVisibility")) {
+                RebuildBasicLayout();
+            }
+
+            if (keyPath.Equals("Columns")) {
+
+                KNTableColumn[] oldColumns = (KNTableColumn[])change.ValueForKey(KNKVOConstants.KNKeyValueChangeOldKey);
+
+                if (oldColumns != null) {
+                    foreach (KNTableColumn column in oldColumns) {
+                        column.RemoveObserverFromKeyPath(this, "Width");
+                    }
+                }
+
+                KNTableColumn[] newColumns = (KNTableColumn[])change.ValueForKey(KNKVOConstants.KNKeyValueChangeNewKey);
+
+                if (newColumns != null) {
+                    foreach (KNTableColumn column in oldColumns) {
+                        column.AddObserverToKeyPathWithOptions(this, "Width", 0, kColumnWidthKVOContext);
+                    }
+                }
+
+                foreach (KNTableColumn column in Columns) {
+                    column.RowHeight = RowHeight;
+                    column.HeaderHeight = HeaderHeight;
+                    column.ContentPadding = ContentPadding;
+                }
+
+                RebuildColumnLayout();
+            }
+
         }
 
-        public void UpdateCell(KNCell cell) {
-            InvalidateVisual();
-            //TODO: Make this more efficient.
-        }
-
-        public KNCell.KNCellContainer Control() {
+        public KNCellContainer Control() {
             return this;
         }
 
@@ -96,6 +238,23 @@ namespace KNControls {
             if (DataSource != null) {
                 DataSource.CellPerformedAction(this, column, cell, column.RowForCell(cell));
                 ReloadData();
+            }
+        }
+
+        public object ObjectForRow(int row, KNTableColumn column) {
+
+            if (DataSource != null) {
+                return DataSource.ObjectForRow(this, column, row);
+            } else {
+                return null;
+            }
+        }
+
+        public int RowCountForColumn(KNTableColumn column) {
+            if (DataSource != null) {
+                return DataSource.NumberOfItemsInTableView(this);
+            } else {
+                return 0;
             }
         }
 
@@ -125,7 +284,7 @@ namespace KNControls {
                     } else {
                         aColumn.SortingPriority = KNTableColumn.SortPriority.NotUsed;
                     }
-                    
+
                 }
 
                 newDirection = Delegate.TableViewWillSortByColumnWithSuggestedSortOrder(this, column, newDirection);
@@ -138,166 +297,13 @@ namespace KNControls {
             }
         }
 
-        //IVARS
-
-        ScrollBar verticalScrollbar;
-        ScrollBar horizontalScrollbar;
-        double headerHeight;
-        ScrollBarVisibility horizontalScrollbarVisibility;
-        ScrollBarVisibility verticalScrollbarVisibility;
-
-        public KNTableView() {
-
-            this.Focusable = true;
-            this.Focus();
-
-            AllowMultipleSelection = true;
-
-            verticalScrollbar = new ScrollBar();
-            horizontalScrollbar = new ScrollBar();
-
-            verticalScrollbar.ValueChanged += ScrollbarDidScroll;
-            horizontalScrollbar.ValueChanged += ScrollbarDidScroll;
-
-            verticalScrollbar.Width = 16.0;
-            horizontalScrollbar.Height = 16.0;
-            horizontalScrollbar.Orientation = Orientation.Horizontal;
-
-            Children.Add(verticalScrollbar);
-            Children.Add(horizontalScrollbar);
-
-            Canvas.SetBottom(horizontalScrollbar, 0.0);
-            Canvas.SetRight(verticalScrollbar, 0.0);
-
-            BackgroundColor = Colors.White;
-            SelectedRows = new ArrayList();
-            Columns = new KNTableColumn[] {};
-            RowHeight = 22.0;
-            AlternateRowColor = Color.FromRgb(237, 243, 254);
-
-            HeaderHeight = 24.0;
-            RowSelectionStyle = SelectionStyle.WindowsExplorer;
-
-            horizontalScrollbar.SmallChange = RowHeight;
-
-            VerticalScrollBarVisibility = ScrollBarVisibility.Automatic;
-            HorizontalScrollBarVisibility = ScrollBarVisibility.Automatic;
-
-            ContentPadding = new Thickness(20.0);
-
-            //Canvas.SetTop(verticalScrollbar, HeaderHeight + 1);
-            this.AddObserverToKeyPathWithOptions(this, "HeaderHeight", 0, null);
-            this.AddObserverToKeyPathWithOptions(this, "VerticalScrollBarVisibility", 0, null);
-            this.AddObserverToKeyPathWithOptions(this, "HorizontalScrollBarVisibility", 0, null);
-            this.AddObserverToKeyPathWithOptions(this, "ContentPadding", 0, null);
-        }
-
-        private Thickness contentPadding;
-
-        private int actualRowCount = 0;
-        private double virtualHeight = 0.0;
-        private double virtualWidth = 0.0;
-        Rect bounds = Rect.Empty;
-        Rect headersArea = Rect.Empty;
-        Rect contentArea = Rect.Empty;
-
-        protected override void OnMouseWheel(MouseWheelEventArgs e) {
-           
-            
-            int newScrollValue = ((int)verticalScrollbar.Value) - ((e.Delta * System.Windows.Forms.SystemInformation.MouseWheelScrollLines / 120) * (int)RowHeight);
-
-            if (newScrollValue < verticalScrollbar.Minimum) {
-                verticalScrollbar.Value = verticalScrollbar.Minimum;
-            } else if (newScrollValue > verticalScrollbar.Maximum) {
-                verticalScrollbar.Value = verticalScrollbar.Maximum;
-            } else {
-                verticalScrollbar.Value = newScrollValue;
-            }
-
-            e.Handled = true;
-
-        }
-        
-        protected override void OnRenderSizeChanged(SizeChangedInfo sizeInfo) {
-            base.OnRenderSizeChanged(sizeInfo);
-
-            RecalculateGeometry();
-            InvalidateVisual();
-        }
-
-        private void AutoResizeColumns() {
-
-            if (Columns.Count() > 0) {
-
-                bool shouldResizeColumns = true;
-                
-                // TODO: Figure out if we should resize the columns?
-
-                if (shouldResizeColumns) {
-                    ArrayList remainingColumns = new ArrayList(Columns.ToArray());
-                    ArrayList fixedSizeColumns = new ArrayList();
-                    long widthLostToFixedColumns = 0;
-
-                    foreach (KNTableColumn column in Columns) {
-                        if (column.MinimumWidth == column.MaximumWidth) {
-                            fixedSizeColumns.Add(column);
-                            widthLostToFixedColumns += column.MaximumWidth;
-                            column.Width = column.MaximumWidth;
-                            remainingColumns.Remove(column);
-                        }
-                    }
-
-                    while (remainingColumns.Count > 0) {
-
-                        bool allColumnsFit = true;
-                        double suggestedHeaderWidth = (contentArea.Width - widthLostToFixedColumns - (ContentPadding.Left  + ContentPadding.Right)) / remainingColumns.Count;
-                        ArrayList columnsThatDidntFit = new ArrayList();
-
-                        foreach (KNTableColumn column in remainingColumns) {
-
-                            if (column.MinimumWidth > suggestedHeaderWidth || column.MaximumWidth < suggestedHeaderWidth) {
-                                columnsThatDidntFit.Add(column);
-                                allColumnsFit = false;
-                            }
-                        }
-
-                        foreach (KNTableColumn column in columnsThatDidntFit) {
-
-                            if (suggestedHeaderWidth < column.MinimumWidth) {
-                                column.Width = column.MinimumWidth;
-                            } else {
-                                column.Width = column.MaximumWidth;
-                            }
-
-                            widthLostToFixedColumns += column.Width;
-                            fixedSizeColumns.Add(column);
-                            remainingColumns.Remove(column);
-
-                        }
-
-                        if (allColumnsFit) {
-                            foreach (KNTableColumn column in remainingColumns) {
-
-                                column.Width = (int)suggestedHeaderWidth;
-                                fixedSizeColumns.Add(column);
-                                widthLostToFixedColumns += column.Width;
-
-                            }
-                            remainingColumns.Clear();
-                        }
-                    }
-                }
-            }
-        }
+        #endregion
 
         public void ReloadData() {
 
             if (DataSource != null) {
 
-                actualRowCount = DataSource.NumberOfItemsInTableView(this);
-                virtualHeight = (actualRowCount * RowHeight) + ContentPadding.Top + ContentPadding.Bottom;
-
-                // Check selections
+                //Check selections
 
                 ArrayList updatedSelection = new ArrayList(SelectedRows);
 
@@ -313,27 +319,117 @@ namespace KNControls {
 
             }
 
-            RecalculateGeometry();
+            RebuildBasicLayout();
+            RebuildColumnLayout();
+            RebuildSelectionLayout();
+
+            foreach (KNTableColumn column in visibleColumns) {
+                column.ReloadData();
+            }
+
             InvalidateVisual();
         }
 
-        private void ScrollbarDidScroll(object sender, EventArgs e) {
+        #region Events
+        
+        protected override void OnRenderSizeChanged(SizeChangedInfo sizeInfo) {
+            base.OnRenderSizeChanged(sizeInfo);
+
+            RebuildBasicLayout();
+            RebuildColumnLayout();
+            RebuildSelectionLayout();
+
             InvalidateVisual();
         }
 
-        private void RecalculateGeometry() {
+        private void VerticalScrollbarDidScroll(object sender, EventArgs e) {
+            foreach (KNTableColumn column in Columns) {
+                column.VerticalOffset = verticalScrollbar.Value;
+            }
+            RebuildSelectionLayout();
+            InvalidateVisual();
+        }
+
+        private void HorizontalScrollBarDidScroll(object sender, EventArgs e) {
+            RebuildColumnLayout();
+            RebuildSelectionLayout();
+            InvalidateVisual();
+        }
+        
+        protected override void OnKeyDown(KeyEventArgs e) {
+            base.OnKeyDown(e);
+
+            if (e.Key == Key.Up) {
+                SelectUpOneRow((e.KeyboardDevice.Modifiers & ModifierKeys.Shift) != 0);
+                e.Handled = true;
+            }
+
+            if (e.Key == Key.Down) {
+                SelectDownOneRow((e.KeyboardDevice.Modifiers & ModifierKeys.Shift) != 0);
+                e.Handled = true;
+            }
+
+            if (e.Key == Key.Home) {
+                EnsureRowIsVisible(0);
+                e.Handled = true;
+            }
+
+            if (e.Key == Key.End) {
+                if (DataSource != null) {
+                    EnsureRowIsVisible(DataSource.NumberOfItemsInTableView(this) - 1);
+                    e.Handled = true;
+                }
+            }
+
+            if (e.Key == Key.PageUp) {
+                verticalScrollbar.Value -= verticalScrollbar.LargeChange;
+                e.Handled = true;
+            }
+
+            if (e.Key == Key.PageDown) {
+                verticalScrollbar.Value += verticalScrollbar.LargeChange;
+                e.Handled = true;
+            }
+
+            if (e.Key == Key.Delete) {
+                if (DataSource != null & SelectedRows.Count > 0) {
+                    if (DataSource.ShouldDeleteObjectsAtRows(this, SelectedRows)) {
+                        // We should handle the selection
+                        if (SelectedRows.Count > 0) {
+                            if ((int)SelectedRows[0] < DataSource.NumberOfItemsInTableView(this)) {
+                                SelectRowAtIndex((int)SelectedRows[0], false);
+                            } else {
+                                SelectRowAtIndex(DataSource.NumberOfItemsInTableView(this) - 1, false);
+                            }
+                        }
+                        ReloadData();
+                    }
+                    e.Handled = true;
+                }
+            }
+        }
+
+        #endregion
+
+        #region Layout
+
+        private void RebuildBasicLayout() {
 
             if (this.ActualHeight == 0.0 && this.ActualWidth == 0.0) {
                 return;
             }
 
+            if (DataSource == null) {
+                return;
+            }
+
+            actualRowCount = DataSource.NumberOfItemsInTableView(this);
+            virtualHeight = (actualRowCount * RowHeight) + ContentPadding.Top + ContentPadding.Bottom + HeaderHeight;
+
             virtualWidth = ContentPadding.Left + ContentPadding.Right;
             foreach (KNTableColumn column in Columns) {
                 virtualWidth += column.Width;
             }
-
-            bounds = new Rect(0, 0, ActualWidth, ActualHeight);
-            headersArea = new Rect(0, 0, ActualWidth, HeaderHeight);
 
             // Calculate whether to show scroll bar(s) or not!
 
@@ -341,14 +437,14 @@ namespace KNControls {
             Boolean verticalScrollBarWillBeShown = false;
 
             Rect proposedContentAreaWithScrollBars = new Rect(0,
-                   HeaderHeight,
+                   0,
                    ActualWidth - verticalScrollbar.ActualWidth,
-                   ActualHeight - horizontalScrollbar.ActualHeight - HeaderHeight);
+                   ActualHeight - horizontalScrollbar.ActualHeight);
 
             Rect proposedContentAreaWithoutScrollBars = new Rect(0,
-               HeaderHeight,
+               0,
                ActualWidth,
-               ActualHeight - HeaderHeight);
+               ActualHeight);
 
             if (VerticalScrollBarVisibility == ScrollBarVisibility.Automatic &&
                 HorizontalScrollBarVisibility == ScrollBarVisibility.Automatic) {
@@ -407,8 +503,6 @@ namespace KNControls {
 
                         }
 
-                   
-
                     } else {
                         horizontalScrollBarWillBeShown = false;
                         verticalScrollBarWillBeShown = false;
@@ -440,79 +534,318 @@ namespace KNControls {
 
             }
 
-            contentArea = new Rect(0,
-                HeaderHeight, 
+            availableContentArea = new Rect(0,
+                0, 
                 ActualWidth - (verticalScrollBarWillBeShown ? verticalScrollbar.Width : 0.0), 
-                ActualHeight - (horizontalScrollBarWillBeShown ? horizontalScrollbar.Height : 0.0) - HeaderHeight);
+                ActualHeight - (horizontalScrollBarWillBeShown ? horizontalScrollbar.Height : 0.0));
 
-            verticalScrollbar.LargeChange = contentArea.Height; 
-            verticalScrollbar.Maximum = virtualHeight - contentArea.Height;
-            verticalScrollbar.Visibility = verticalScrollBarWillBeShown ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed;
+            double newVerticalScrollBarLargeChange = availableContentArea.Height - HeaderHeight;
+            if (verticalScrollbar.LargeChange != newVerticalScrollBarLargeChange) {
+                verticalScrollbar.LargeChange = newVerticalScrollBarLargeChange;
+            }
 
-            horizontalScrollbar.LargeChange = contentArea.Width;
-            horizontalScrollbar.Maximum = virtualWidth - contentArea.Width;
-            horizontalScrollbar.Visibility = horizontalScrollBarWillBeShown ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed;
+            double newVerticalScrollBarMaximum = virtualHeight - availableContentArea.Height;
+            if (verticalScrollbar.Maximum != newVerticalScrollBarMaximum) {
+                verticalScrollbar.Maximum = newVerticalScrollBarMaximum;
+            }
 
-            verticalScrollbar.ViewportSize = contentArea.Height;
-            horizontalScrollbar.ViewportSize = contentArea.Width;
+            System.Windows.Visibility newVerticalScrollBarVisibility = verticalScrollBarWillBeShown ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed;
+            if (verticalScrollbar.Visibility != newVerticalScrollBarVisibility) {
+                verticalScrollbar.Visibility = newVerticalScrollBarVisibility;
+            }
 
-            verticalScrollbar.Height = contentArea.Height;
-            horizontalScrollbar.Width = contentArea.Width;
+            double newVerticalScrollBarViewPortSize = availableContentArea.Height;
+            if (verticalScrollbar.ViewportSize != newVerticalScrollBarViewPortSize) {
+                verticalScrollbar.ViewportSize = newVerticalScrollBarViewPortSize;
+            }
+
+            double newVerticalScrollBarHeight = availableContentArea.Height;
+            if (verticalScrollbar.Height != newVerticalScrollBarViewPortSize) {
+                verticalScrollbar.Height = newVerticalScrollBarHeight;
+            }
+
+            double newHorizontalScrollBarLargeChange = availableContentArea.Width;
+            if (verticalScrollbar.LargeChange != newHorizontalScrollBarLargeChange) {
+                verticalScrollbar.LargeChange = newHorizontalScrollBarLargeChange;
+            }
+
+            double newHorizontalScrollBarMaximum = virtualWidth - availableContentArea.Width;
+            if (horizontalScrollbar.Maximum != newHorizontalScrollBarMaximum) {
+                horizontalScrollbar.Maximum = newHorizontalScrollBarMaximum;
+            }
+
+            System.Windows.Visibility newHorizontalScrollBarVisibility = horizontalScrollBarWillBeShown ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed;
+            if (horizontalScrollbar.Visibility != newHorizontalScrollBarVisibility) {
+                horizontalScrollbar.Visibility = newHorizontalScrollBarVisibility;
+            }
+
+            double newHorizontalScrollBarViewPortSize = availableContentArea.Width;
+            if (horizontalScrollbar.ViewportSize != newHorizontalScrollBarViewPortSize) {
+                horizontalScrollbar.ViewportSize = newHorizontalScrollBarViewPortSize;
+            }
+
+            double newHorizontalScrollBarWidth = availableContentArea.Width;
+            if (horizontalScrollbar.Width != newHorizontalScrollBarWidth) {
+                horizontalScrollbar.Width = newHorizontalScrollBarWidth;
+            }
+
+            if (columnStack.Height != availableContentArea.Height) {
+                columnStack.Height = availableContentArea.Height;
+            }
 
         }
 
-        protected override void OnKeyDown(KeyEventArgs e) {
-            base.OnKeyDown(e);
+        private void RebuildColumnLayout() {
 
-            if (e.Key == Key.Up) {
-                SelectUpOneRow((e.KeyboardDevice.Modifiers & ModifierKeys.Shift) != 0);
-                e.Handled = true;
-            }
+            double firstVisibleXColumn = horizontalScrollbar.Value;
+            double lastVisibleXColumn = horizontalScrollbar.Value + availableContentArea.Width;
 
-            if (e.Key == Key.Down) {
-                SelectDownOneRow((e.KeyboardDevice.Modifiers & ModifierKeys.Shift) != 0);
-                e.Handled = true;
-            }
+            double firstXColumnOfFirstVisibleColumn = Columns.Length == 0 ? 0.0 : double.MaxValue;
+            double lastXColumnOfLastVisibleColumn = Columns.Length == 0 ? 0.0 : double.MinValue;
 
-            if (e.Key == Key.Home) {
-                EnsureRowIsVisible(0);
-                e.Handled = true;
-            }
+            double currentColumnStartX = ContentPadding.Left;
 
-            if (e.Key == Key.End) {
-                if (DataSource != null) {
-                    EnsureRowIsVisible(DataSource.NumberOfItemsInTableView(this) - 1);
-                    e.Handled = true;
+            ArrayList newVisibleColumns = new ArrayList();
+
+            foreach (KNTableColumn column in Columns) {
+
+                if (currentColumnStartX <= lastVisibleXColumn ||
+                    currentColumnStartX + column.Width >= firstVisibleXColumn) {
+
+                    if (currentColumnStartX < firstXColumnOfFirstVisibleColumn) {
+                        firstXColumnOfFirstVisibleColumn = currentColumnStartX;
+                    }
+
+                    if (currentColumnStartX + column.Width > lastXColumnOfLastVisibleColumn) {
+                        lastXColumnOfLastVisibleColumn = currentColumnStartX + column.Width;
+                    }
+
+                    newVisibleColumns.Add(column);
+                    currentColumnStartX += column.Width;
                 }
             }
 
-            if (e.Key == Key.PageUp) {
-                verticalScrollbar.Value -= verticalScrollbar.LargeChange;
-                e.Handled = true;
+            double stackPanelLeft = firstXColumnOfFirstVisibleColumn - firstVisibleXColumn;
+            double stackPanelWidth = lastXColumnOfLastVisibleColumn - firstXColumnOfFirstVisibleColumn;
+
+            if (stackPanelWidth < availableContentArea.Width) {
+                stackPanelWidth = availableContentArea.Width;
             }
 
-            if (e.Key == Key.PageDown) {
-                verticalScrollbar.Value += verticalScrollbar.LargeChange;
-                e.Handled = true;
+            if (columnStack.Width != stackPanelWidth) {
+                columnStack.Width = stackPanelWidth;
             }
 
-            if (e.Key == Key.Delete) {
-                if (DataSource != null & SelectedRows.Count > 0) {
-                    if (DataSource.ShouldDeleteObjectsAtRows(this, SelectedRows)) {
-                        // We should handle the selection
-                        if (SelectedRows.Count > 0) {
-                            if ((int)SelectedRows[0] < DataSource.NumberOfItemsInTableView(this)) {
-                                SelectRowAtIndex((int)SelectedRows[0], false);
-                            } else {
-                                SelectRowAtIndex(DataSource.NumberOfItemsInTableView(this) - 1, false);
+            if (Canvas.GetLeft(columnStack) != stackPanelLeft) {
+                Canvas.SetLeft(columnStack, stackPanelLeft);
+            }
+
+            double newColumnHeight = columnStack.Height;
+            
+            if (!CompareArrayLists(newVisibleColumns, visibleColumns)) {
+
+                columnStack.Children.Clear();
+
+                foreach (KNTableColumn column in newVisibleColumns) {
+                    if (column.Height != newColumnHeight) {
+                        column.Height = newColumnHeight;
+                    }
+                    columnStack.Children.Add(column);
+                }
+
+                visibleColumns = newVisibleColumns;
+
+            } else {
+                // Just make sure the heights are correct
+                foreach (KNTableColumn column in newVisibleColumns) {
+                    if (column.Height != newColumnHeight) {
+                        column.Height = newColumnHeight;
+                    }
+                }
+            }
+        }
+
+        private void RebuildSelectionLayout() {
+
+            if (selectionLayers.Count == 0 && SelectedRows.Count == 0) {
+                return;
+            }
+
+            // Figure out visible, selected rows
+
+            int firstVisibleRow, lastVisibleRow;
+            double firstVisibleRowVerticalOffset;
+            GetVisibleRows(out firstVisibleRow, out lastVisibleRow, out firstVisibleRowVerticalOffset);
+
+            ArrayList visibleSelectedRows = new ArrayList();
+
+            for (int currentRow = firstVisibleRow; currentRow <= lastVisibleRow; currentRow++) {
+                if (SelectedRows.Contains(currentRow)) {
+                    visibleSelectedRows.Add(currentRow);
+                }
+            }
+
+            // Compare to our current selection layers
+            // If the number differs, add/remove
+
+            while (selectionLayers.Count < visibleSelectedRows.Count) {
+
+                KNTableViewRowSelectionLayer newLayer = new KNTableViewRowSelectionLayer();
+                Canvas.SetZIndex(newLayer, kSelectionZIndex);
+                Children.Add(newLayer);
+                selectionLayers.Add(newLayer);
+            }
+
+            while (selectionLayers.Count > visibleSelectedRows.Count) {
+
+                KNTableViewRowSelectionLayer layer = (KNTableViewRowSelectionLayer)selectionLayers[0];
+                Children.Remove(layer);
+                selectionLayers.Remove(layer);
+            }
+
+            // Setup style, position, etc
+
+
+
+            double selectionRowLeft = 0.0;
+            double selectionRowWidth = availableContentArea.Width ;
+
+            double virtualContentLeft = ContentPadding.Left - horizontalScrollbar.Value;
+            double virtualContentWidth = virtualWidth - ContentPadding.Left - ContentPadding.Right;
+            // ^ Relative to actual positioning.
+
+            for (int rowPointer = 0; rowPointer < selectionLayers.Count; rowPointer++) {
+
+                int row = (int)visibleSelectedRows[rowPointer];
+                KNTableViewRowSelectionLayer layer = (KNTableViewRowSelectionLayer)selectionLayers[rowPointer];
+
+                if (layer.Width != selectionRowWidth) {
+                    layer.Width = selectionRowWidth;
+                }
+
+                if (layer.Height != RowHeight) {
+                    layer.Height = RowHeight;
+                }
+
+                if (Canvas.GetLeft(layer) != selectionRowLeft) {
+                    Canvas.SetLeft(layer, selectionRowLeft);
+                }
+
+                double selectionRowTop = (firstVisibleRowVerticalOffset + ((row - firstVisibleRow) * RowHeight));
+                if (Canvas.GetTop(layer) != selectionRowTop) {
+                    Canvas.SetTop(layer, selectionRowTop);
+                }
+
+                layer.ContentStart = virtualContentLeft;
+                layer.ContentLength = virtualContentWidth;
+                layer.SelectionStyle = RowSelectionStyle;
+
+            }
+
+        }
+        
+        private void AutoResizeColumns() {
+
+            if (Columns.Count() > 0) {
+
+                bool shouldResizeColumns = true;
+                
+                // TODO: Figure out if we should resize the columns?
+
+                if (shouldResizeColumns) {
+                    ArrayList remainingColumns = new ArrayList(Columns.ToArray());
+                    ArrayList fixedSizeColumns = new ArrayList();
+                    double widthLostToFixedColumns = 0;
+
+                    foreach (KNTableColumn column in Columns) {
+                        if (column.MinimumWidth == column.MaximumWidth) {
+                            fixedSizeColumns.Add(column);
+                            widthLostToFixedColumns += column.MaximumWidth;
+                            column.Width = column.MaximumWidth;
+                            remainingColumns.Remove(column);
+                        }
+                    }
+
+                    while (remainingColumns.Count > 0) {
+
+                        bool allColumnsFit = true;
+                        double suggestedHeaderWidth = (availableContentArea.Width - widthLostToFixedColumns - (ContentPadding.Left  + ContentPadding.Right)) / remainingColumns.Count;
+                        ArrayList columnsThatDidntFit = new ArrayList();
+
+                        foreach (KNTableColumn column in remainingColumns) {
+
+                            if (column.MinimumWidth > suggestedHeaderWidth || column.MaximumWidth < suggestedHeaderWidth) {
+                                columnsThatDidntFit.Add(column);
+                                allColumnsFit = false;
                             }
                         }
-                        ReloadData();
+
+                        foreach (KNTableColumn column in columnsThatDidntFit) {
+
+                            if (suggestedHeaderWidth < column.MinimumWidth) {
+                                column.Width = column.MinimumWidth;
+                            } else {
+                                column.Width = column.MaximumWidth;
+                            }
+
+                            widthLostToFixedColumns += column.Width;
+                            fixedSizeColumns.Add(column);
+                            remainingColumns.Remove(column);
+
+                        }
+
+                        if (allColumnsFit) {
+                            foreach (KNTableColumn column in remainingColumns) {
+
+                                column.Width = (int)suggestedHeaderWidth;
+                                fixedSizeColumns.Add(column);
+                                widthLostToFixedColumns += column.Width;
+
+                            }
+                            remainingColumns.Clear();
+                        }
                     }
-                    e.Handled = true;
                 }
             }
         }
+
+        private bool CompareArrayLists(ArrayList anArray, ArrayList anotherArray) {
+
+            if (anArray.Count == anotherArray.Count) {
+
+                int count = anArray.Count;
+
+                for (int i = 0; i < count; i++) {
+                    if (!anArray[i].Equals(anotherArray[i])) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+            return false;
+        }
+
+        private void GetVisibleRows(out int firstRowIndex, out int lastRowIndex, out double firstRowAbsolutePixelOffset) {
+
+            double yOffset = verticalScrollbar.Value; // This includes any vertical padding
+
+            int firstRow = (int)Math.Floor((yOffset - ContentPadding.Top) / RowHeight);
+            if (firstRow < 0) firstRow = 0; // This happens when there's vertical padding
+
+            double firstRowOffsetInContentArea = (HeaderHeight + (firstRow * RowHeight) + ContentPadding.Top) - yOffset;
+            // ^ Can be negative
+
+            int visibleRowCount = (int)Math.Ceiling((availableContentArea.Height - firstRowOffsetInContentArea) / RowHeight);
+            int lastRow = firstRow + visibleRowCount;
+
+            firstRowIndex = firstRow;
+            lastRowIndex = lastRow;
+            firstRowAbsolutePixelOffset = firstRowOffsetInContentArea;
+        }
+
+        #endregion
+
+        #region Selection Convenience Methods
 
         public void SelectRowAtIndex(int rowIndex, bool extendSelection) {
 
@@ -540,7 +873,7 @@ namespace KNControls {
                     } else {
                         newSelection.Add(rowIndex);
                     }
-                    
+
                     SelectedRows = newSelection;
                     EnsureRowIsVisible(rowIndex);
 
@@ -645,7 +978,6 @@ namespace KNControls {
                     }
                 }
             }
-            InvalidateVisual();
         }
 
         public void SelectDownOneRow(bool extendSelection) {
@@ -743,7 +1075,6 @@ namespace KNControls {
                     }
                 }
             }
-            InvalidateVisual();
         }
 
         public void EnsureRowIsVisible(int row) {
@@ -760,9 +1091,10 @@ namespace KNControls {
 
         }
 
-        KNActionCell mouseEventsCell;
-        Rect mouseEventsCellAbsoluteFrame;
-        bool mouseEventsCellSwallowedEvents;
+        #endregion
+
+        #region Mouse
+
         Point lastMouseDownPoint;
         int hingedRow = -1; // The row a shift-select "hinges" round. Usually the last row selected without the shift key.
         int selectedRowIfNoDrag = -1;
@@ -770,20 +1102,15 @@ namespace KNControls {
         protected override void OnMouseDown(MouseButtonEventArgs e) {
             
             // If we're on a row, select it. 
-            // If we're *also* on an action cell, see if it wants 
-            // to swallow the mouse events. 
-
-            // Haha, swallow. *High five*
 
             e.Handled = true;
             this.Focus();
             dragDecision = MouseDragDecision.NoDecisionMade;
-            this.CaptureMouse();
 
             Point mouseLocationInControl = e.GetPosition(this);
             lastMouseDownPoint = mouseLocationInControl;
 
-            if (contentArea.Contains(mouseLocationInControl)) {
+            if (availableContentArea.Contains(mouseLocationInControl)) {
                 // We're over a row. Apply some selection rules
                 int row = RowAtAbsoluteOffset(mouseLocationInControl.Y);
 
@@ -882,44 +1209,21 @@ namespace KNControls {
                         }
                     }
                 }
-
-                // The selection changed!
-                //TODO: Fire events
-                //TODO: Make stuff KVO compliant
-
             }
 
             Rect absoluteCellFrame;
             KNCell cell = CellAtAbsolutePoint(mouseLocationInControl, out absoluteCellFrame);
 
-            if (cell != mouseEventsCell) {
-                // User clicked a cell that the mouse hasn't moved over yet. Is this possible? Do we care?
-                //throw new Exception("Inconsistent state");
-            }
-           
-            if (cell != null && typeof(KNActionCell).IsAssignableFrom(cell.GetType())) {
-
-                Rect mouseEventsCellRelativeFrame = new Rect(0, 0, mouseEventsCellAbsoluteFrame.Width, mouseEventsCellAbsoluteFrame.Height);
-                Point mouseEventsCellRelativePoint = new Point(mouseLocationInControl.X - mouseEventsCellAbsoluteFrame.X,
-                    mouseLocationInControl.Y - mouseEventsCellAbsoluteFrame.Y);
-
-                if (mouseEventsCell.MouseDownInCell(mouseEventsCellRelativePoint, mouseEventsCellRelativeFrame)) {
-
-                    mouseEventsCellSwallowedEvents = true;
-                }
-
-                
-            }
-            
-            InvalidateVisual();
-
-            if (mouseEventsCellSwallowedEvents == false && e.RightButton == MouseButtonState.Pressed) {
+            if (e.RightButton == MouseButtonState.Pressed) {
                 if (Delegate != null) {
                     if (Delegate.TableViewDelegateShouldShowContextualMenuWithObjectsAtIndexes(this, SelectedRows)) {
                         selectedRowIfNoDrag = -1;
                     }
                 }
             }
+
+
+            this.CaptureMouse();
 
         }
 
@@ -946,110 +1250,95 @@ namespace KNControls {
 
             // If the mouse moves over x pixels from the start point
             // and a cell isn't swallowing events, start a drag!
-
-            // If a cell is swallowing events, pass the drag through and reset selectedRowIfNoDrag
-
             Point mouseLocationInControl = e.GetPosition(this);
 
-            if (mouseEventsCell != null && mouseEventsCellSwallowedEvents) {
-                selectedRowIfNoDrag = -1;
 
-                Rect mouseEventsCellRelativeFrame = new Rect(0, 0, mouseEventsCellAbsoluteFrame.Width, mouseEventsCellAbsoluteFrame.Height);
-                Point mouseEventsCellRelativePoint = new Point(mouseLocationInControl.X - mouseEventsCellAbsoluteFrame.X,
-                    mouseLocationInControl.Y - mouseEventsCellAbsoluteFrame.Y);
+            // We should start a drag. If The delegate allows it, do a proper OS drag. 
+            // If not, select some rows.
 
-                mouseEventsCell.MouseDraggedInCell(mouseEventsCellRelativePoint, mouseEventsCellRelativeFrame);
+            double verticalMotion = mouseLocationInControl.Y - lastMouseDownPoint.Y;
+            double horizontalMotion = mouseLocationInControl.X - lastMouseDownPoint.X;
 
-                InvalidateVisual();
+            if (verticalMotion < 0.0) {
+                verticalMotion = 0.0 - verticalMotion;
+            }
 
-            } else {
+            if (horizontalMotion < 0.0) {
+                horizontalMotion = 0.0 - horizontalMotion;
+            }
 
-                // We should start a drag. If The delegate allows it, do a proper OS drag. 
-                // If not, select some rows.
+            if (availableContentArea.Contains(mouseLocationInControl) &&
+                (verticalMotion > SystemParameters.MinimumVerticalDragDistance ||
+                horizontalMotion > SystemParameters.MinimumHorizontalDragDistance)) {
 
-                double verticalMotion = mouseLocationInControl.Y - lastMouseDownPoint.Y;
-                double horizontalMotion = mouseLocationInControl.X - lastMouseDownPoint.X;
+                if (dragDecision == MouseDragDecision.NoDecisionMade) {
 
-                if (verticalMotion < 0.0) {
-                    verticalMotion = 0.0 - verticalMotion;
-                }
+                    if (AllowMultipleSelection) {
+                        dragDecision = MouseDragDecision.SelectionDecisionMade;
+                    }
 
-                if (horizontalMotion < 0.0) {
-                    horizontalMotion = 0.0 - horizontalMotion;
-                }
+                    if (Delegate != null) {
 
-                if (contentArea.Contains(mouseLocationInControl) &&
-                    (verticalMotion > SystemParameters.MinimumVerticalDragDistance ||
-                    horizontalMotion > SystemParameters.MinimumHorizontalDragDistance)) {
+                        // Before asking the delegate, figure out if the drag is up/down
+                        // before asking. If up/down, select anyway.
 
-                    if (dragDecision == MouseDragDecision.NoDecisionMade) {
-
-                        if (AllowMultipleSelection) {
-                            dragDecision = MouseDragDecision.SelectionDecisionMade;
+                        if ((horizontalMotion > verticalMotion) || !AllowMultipleSelection) {
+                            if (Delegate.TableViewDelegateShouldBeginDragOperationWithObjectsAtIndexes(this, SelectedRows)) {
+                                dragDecision = MouseDragDecision.DragDecisionMade;
+                                selectedRowIfNoDrag = -1;
+                            }
                         }
+                    }
+                }
+
+                if (dragDecision == MouseDragDecision.SelectionDecisionMade) {
+
+                    int maxAllowableRow = 0;
+                    if (DataSource != null) {
+                        maxAllowableRow = DataSource.NumberOfItemsInTableView(this);
+                    }
+
+                    int row = RowAtAbsoluteOffset(mouseLocationInControl.Y);
+                    if (selectedRowIfNoDrag > -1 && selectedRowIfNoDrag <= maxAllowableRow) {
+                        hingedRow = selectedRowIfNoDrag;
+                        selectedRowIfNoDrag = -1;
+                    }
+
+                    int minRow = -1;
+                    int maxRow = -1;
+
+                    if (hingedRow < row) {
+                        minRow = hingedRow;
+                        maxRow = row;
+                    } else {
+                        minRow = row;
+                        maxRow = hingedRow;
+                    }
+
+                    if (minRow < 0) {
+                        minRow = 0;
+                    }
+
+                    if (maxRow > maxAllowableRow) {
+                        maxRow = maxAllowableRow;
+                    }
+
+                    ArrayList newSelection = new ArrayList();
+
+                    for (int thisRow = minRow; thisRow <= maxRow; thisRow++) {
 
                         if (Delegate != null) {
-
-                            // Before asking the delegate, figure out if the drag is up/down
-                            // before asking. If up/down, select anyway.
-
-                            if ((horizontalMotion > verticalMotion) || !AllowMultipleSelection) {
-                                if (Delegate.TableViewDelegateShouldBeginDragOperationWithObjectsAtIndexes(this, SelectedRows)) {
-                                    dragDecision = MouseDragDecision.DragDecisionMade;
-                                    selectedRowIfNoDrag = -1;
-                                }
-                            }
-                        }
-                    }
-
-                    if (dragDecision == MouseDragDecision.SelectionDecisionMade) {
-
-                        int maxAllowableRow = 0;
-                        if (DataSource != null) {
-                            maxAllowableRow = DataSource.NumberOfItemsInTableView(this);
-                        }
-
-                        int row = RowAtAbsoluteOffset(mouseLocationInControl.Y);
-                        if (selectedRowIfNoDrag > -1 && selectedRowIfNoDrag <= maxAllowableRow) {
-                            hingedRow = selectedRowIfNoDrag;
-                            selectedRowIfNoDrag = -1;
-                        }
-
-                        int minRow = -1;
-                        int maxRow = -1;
-
-                        if (hingedRow < row) {
-                            minRow = hingedRow;
-                            maxRow = row;
-                        } else {
-                            minRow = row;
-                            maxRow = hingedRow;
-                        }
-
-                        if (minRow < 0) {
-                            minRow = 0;
-                        }
-
-                        if (maxRow > maxAllowableRow) {
-                            maxRow = maxAllowableRow;
-                        }
-
-                        ArrayList newSelection = new ArrayList();
-
-                        for (int thisRow = minRow; thisRow <= maxRow; thisRow++) {
-
-                            if (Delegate != null) {
-                                if (Delegate.TableViewShouldSelectRow(this, thisRow)) {
-                                    newSelection.Add(thisRow);
-                                }
-                            } else {
+                            if (Delegate.TableViewShouldSelectRow(this, thisRow)) {
                                 newSelection.Add(thisRow);
                             }
+                        } else {
+                            newSelection.Add(thisRow);
                         }
-
-                        SelectedRows = newSelection;
                     }
+
+                    SelectedRows = newSelection;
                 }
+
             }
         }
 
@@ -1062,24 +1351,10 @@ namespace KNControls {
             dragDecision = MouseDragDecision.NoDecisionMade;
             this.ReleaseMouseCapture();
 
-            if (mouseEventsCell != null && mouseEventsCellSwallowedEvents) {
-
-                Rect mouseEventsCellRelativeFrame = new Rect(0, 0, mouseEventsCellAbsoluteFrame.Width, mouseEventsCellAbsoluteFrame.Height);
-                Point mouseEventsCellRelativePoint = new Point(mouseLocationInControl.X - mouseEventsCellAbsoluteFrame.X,
-                    mouseLocationInControl.Y - mouseEventsCellAbsoluteFrame.Y);
-
-                mouseEventsCell.MouseUpInCell(mouseEventsCellRelativePoint, mouseEventsCellRelativeFrame);
-
-                InvalidateVisual();
-
-                mouseEventsCellSwallowedEvents = false;
-            }
-
             if (selectedRowIfNoDrag > -1) {
                 SelectedRows.Clear();
                 SelectedRows.Add(selectedRowIfNoDrag);
                 selectedRowIfNoDrag = -1;
-                InvalidateVisual();
             }
 
             // This will update state based on current cursor location
@@ -1088,79 +1363,32 @@ namespace KNControls {
         }
 
         private void MouseMoved(MouseEventArgs e) {
-
-            Point mouseLocationInControl = e.GetPosition(this);
-            Rect absoluteCellFrame;
-            KNCell cell = CellAtAbsolutePoint(mouseLocationInControl, out absoluteCellFrame);
-
-            // If we're on a column cell, check cursors
-
-            if (cell != null &&
-                typeof(KNHeaderCell).IsAssignableFrom(cell.GetType()) &&
-                absoluteCellFrame.Right - mouseLocationInControl.X <= KNTableColumn.kResizeAreaWidth) {
-
-                KNTableColumn column = ColumnAtAbsoluteOffset(mouseLocationInControl.X);
-                if (column != null && column.UserResizable) {
-                    Cursor = Cursors.SizeWE;
-                } else {
-                    Cursor = Cursors.Arrow;
-                }
-            } else {
-                Cursor = Cursors.Arrow;
-            }
-
-            // Send a message to any existing cell.
-
-            if (mouseEventsCell != null) {
-
-                Rect mouseEventsCellRelativeFrame = new Rect(0, 0, mouseEventsCellAbsoluteFrame.Width, mouseEventsCellAbsoluteFrame.Height);
-                Point mouseEventsCellRelativePoint = new Point(mouseLocationInControl.X - mouseEventsCellAbsoluteFrame.X,
-                    mouseLocationInControl.Y - mouseEventsCellAbsoluteFrame.Y);
-
-                if (mouseEventsCell.MouseDidMoveInCell(mouseEventsCellRelativePoint, mouseEventsCellRelativeFrame)) {
-                    InvalidateVisual();
-                }
-            }
-
-            // If we're not in the existing cell any more, find a new one!
-
-            if (!mouseEventsCellAbsoluteFrame.Contains(mouseLocationInControl)) {
-
-                mouseEventsCellAbsoluteFrame = Rect.Empty;
-                mouseEventsCell = null;
-
-                if (cell != null && typeof(KNActionCell).IsAssignableFrom(cell.GetType())) {
-                    // We only care about action cells.
-
-                    Point relPoint = new Point(mouseLocationInControl.X - absoluteCellFrame.X, mouseLocationInControl.Y - absoluteCellFrame.Y);
-                    Rect relFrame = new Rect(0, 0, absoluteCellFrame.Width, absoluteCellFrame.Height);
-
-                    mouseEventsCellAbsoluteFrame = absoluteCellFrame;
-                    mouseEventsCell = (KNActionCell)cell;
-
-                    if (mouseEventsCell.MouseDidMoveInCell(relPoint, relFrame)) {
-                        InvalidateVisual();
-                    }
-                }
-            }
+            // We don't care any more. Hooray!!!
         }
 
         protected override void OnMouseLeave(MouseEventArgs e) {
-
-            if (mouseEventsCell != null) {
-
-                Rect relativeFrame = mouseEventsCellAbsoluteFrame;
-                relativeFrame.X = 0;
-                relativeFrame.Y = 0;
-
-                if (mouseEventsCell.MouseDidMoveInCell(new Point(-1, -1), relativeFrame)) {
-                    InvalidateVisual();
-                }
-
-                mouseEventsCell = null;
-                mouseEventsCellAbsoluteFrame = Rect.Empty;
-            }
         }
+
+        protected override void OnMouseWheel(MouseWheelEventArgs e) {
+
+
+            int newScrollValue = ((int)verticalScrollbar.Value) - ((e.Delta * System.Windows.Forms.SystemInformation.MouseWheelScrollLines / 120) * (int)RowHeight);
+
+            if (newScrollValue < verticalScrollbar.Minimum) {
+                verticalScrollbar.Value = verticalScrollbar.Minimum;
+            } else if (newScrollValue > verticalScrollbar.Maximum) {
+                verticalScrollbar.Value = verticalScrollbar.Maximum;
+            } else {
+                verticalScrollbar.Value = newScrollValue;
+            }
+
+            e.Handled = true;
+
+        }
+
+        #endregion
+
+        #region Region <-> Point Conversion
 
         private KNCell CellAtAbsolutePoint(Point point) {
             Rect frame;
@@ -1169,25 +1397,7 @@ namespace KNControls {
 
         private KNCell CellAtAbsolutePoint(Point point, out Rect absoluteFrame) {
 
-            if (headersArea.Contains(point)) {
-
-                double colStartX = ContentPadding.Left;
-                double xOffset = horizontalScrollbar.Value;
-                double yOffset = verticalScrollbar.Value;
-
-                foreach (KNTableColumn column in Columns) {
-
-                    Rect headerRect = new Rect(colStartX - xOffset, headersArea.Y, column.Width, headersArea.Height);
-                    if (headerRect.Contains(point)) {
-                        absoluteFrame = headerRect;
-                        return column.HeaderCell;
-                    }
-
-                    colStartX += column.Width;
-
-                }
-
-            } else if (contentArea.Contains(point)) {
+            if (availableContentArea.Contains(point)) {
 
                 // Find the cell!!
 
@@ -1251,91 +1461,48 @@ namespace KNControls {
 
         private int RowAtAbsoluteOffset(double y, out double absoluteYOffset) {
 
-            if (y < contentArea.Top || y > contentArea.Bottom) {
+            if (y < availableContentArea.Top || y > availableContentArea.Bottom) {
                 absoluteYOffset = -RowHeight;
                 return -1;
             }
 
             double yOffset = verticalScrollbar.Value;
-            int row = (int)Math.Floor((yOffset + (y - contentArea.Top - ContentPadding.Top)) / RowHeight);
+            int row = (int)Math.Floor((yOffset + (y - availableContentArea.Top - ContentPadding.Top - HeaderHeight)) / RowHeight);
 
-            absoluteYOffset = (row * RowHeight) + ContentPadding.Top + contentArea.Top - yOffset;
+            absoluteYOffset = (row * RowHeight) + ContentPadding.Top + availableContentArea.Top - yOffset;
             return row;
         }
 
+        #endregion
+
+        #region Drawing 
+
         protected override void OnRender(DrawingContext drawingContext) {
 
-            if (contentArea.IsEmpty) {
+            if (availableContentArea.IsEmpty) {
                 return;
             }
 
-            double xOffset = horizontalScrollbar.Value;
-            double yOffset = verticalScrollbar.Value;
-
             // Draw! 
-            drawingContext.DrawRectangle(new SolidColorBrush(BackgroundColor), null, bounds);
+            drawingContext.DrawRectangle(new SolidColorBrush(BackgroundColor), null, availableContentArea);
 
-            int firstRow = (int)Math.Floor(yOffset / RowHeight);
-            double firstRowOffsetInContentArea = (firstRow * RowHeight) - yOffset; // Should be 0 or less
-            int visibleRowCount = (int)Math.Ceiling(contentArea.Height / RowHeight);
-            int lastRow = firstRow + visibleRowCount;
+            int firstRow, lastRow;
+            double firstRowOffsetInContentArea;
+            GetVisibleRows(out firstRow, out lastRow, out firstRowOffsetInContentArea);
 
-            drawingContext.PushClip(new RectangleGeometry(contentArea));
+            drawingContext.PushClip(new RectangleGeometry(availableContentArea));
 
             for (int currentRow = firstRow; currentRow <= lastRow; currentRow++) {
 
                 Rect rowRect = new Rect(0,
-                    contentArea.Top + firstRowOffsetInContentArea + ((currentRow - firstRow) * RowHeight),
-                    contentArea.Width,
+                    firstRowOffsetInContentArea + ((currentRow - firstRow) * RowHeight),
+                    availableContentArea.Width,
                     RowHeight);
 
-                if (SelectedRows.Contains(currentRow)) {
-                    // Draw selection background
-
-                    Rect rowContentRect = new Rect(contentArea.X + ContentPadding.Left - xOffset,
-                        rowRect.Y + ContentPadding.Top,
-                        virtualWidth - (ContentPadding.Left + ContentPadding.Right),
-                        RowHeight);
-                    
-                    DrawRowHighlightInRect(drawingContext, rowContentRect, rowRect);
-
-                } else {
-                    if (AlternatingRows && currentRow % 2 == 0) {
-                        drawingContext.DrawRectangle(new SolidColorBrush(AlternateRowColor), null, rowRect);
-                    }
+                if (AlternatingRows && currentRow % 2 == 0) {
+                    drawingContext.DrawRectangle(new SolidColorBrush(AlternateRowColor), null, rowRect);
                 }
-
-                // Draw rows
-
-                double columnStartX = ContentPadding.Left;
-
-                if (currentRow < actualRowCount) {
-
-                    foreach (KNTableColumn column in Columns) {
-
-                        Rect columnRect = new Rect(columnStartX - xOffset, rowRect.Y + ContentPadding.Top, column.Width, rowRect.Height);
-                        columnStartX += column.Width;
-
-                        if (contentArea.IntersectsWith(columnRect)) {
-
-                            KNCell cell = column.CellForRow(currentRow);
-
-                            if (DataSource != null) {
-                                cell.ObjectValue = DataSource.ObjectForRow(this, column, currentRow);
-                            }
-
-                            cell.Highlighted = SelectedRows.Contains(currentRow);
-                            cell.ParentControl = this;
-
-                            drawingContext.PushClip(new RectangleGeometry(columnRect));
-                            cell.RenderInFrame(drawingContext, columnRect);
-                                
-                            drawingContext.Pop();
-                        }
-                    }
-
-                }
-
+                
                 if (DrawHorizontalGridLines) {
 
                     drawingContext.DrawLine(new Pen(new SolidColorBrush(GridColor), 1.0),
@@ -1348,110 +1515,12 @@ namespace KNControls {
             // Pop the contentArea clip
             drawingContext.Pop();
 
-            // Go through columns again, this time drawig vertical lines and headers
-
-            double colStartX = ContentPadding.Left;
-
-            foreach (KNTableColumn column in Columns) {
-
-                if (headersArea.Height > 0.0) {
-                    Rect headerRect = new Rect(colStartX - xOffset, headersArea.Y, column.Width, headersArea.Height);
-
-                    if (headerRect.IntersectsWith(headersArea)) {
-
-                        drawingContext.PushClip(new RectangleGeometry(headerRect));
-                        column.HeaderCell.RenderInFrame(drawingContext, headerRect);
-                        drawingContext.Pop();
-                    }
-                }
-
-                colStartX += column.Width;
-
-                if (DrawVerticalGridLines) {
-                    drawingContext.DrawLine(new Pen(new SolidColorBrush(GridColor), 1.0),
-                        new Point(colStartX - 1.0, contentArea.Y),
-                        new Point(colStartX - 1.0, contentArea.Y + contentArea.Height));
-                }
-
-                if ((headersArea.Width - colStartX) > 0 && headersArea.Height > 0.0) {
-                    if (CornerCell != null) {
-                        CornerCell.RenderInFrame(drawingContext, new Rect(colStartX, headersArea.Y, headersArea.Width - colStartX + 1, headersArea.Height));
-                    }
-                }
-            }
         }
 
+        #endregion
 
-        private void DrawRowHighlightInRect(DrawingContext drawingContext, Rect rowContentRect, Rect visibleRowRect) {
-            
-            switch (RowSelectionStyle) {
-
-                case SelectionStyle.WindowsExplorer:
-
-                    Rect rowRect = rowContentRect;
-                    rowRect.Inflate(-.5, -.5);
-
-                    Color outerLineColor, innerLineStartColor, innerLineEndColor, gradientStartColor, gradientEndColor;
-
-                    if (IsFocused) {
-
-                        outerLineColor = Color.FromRgb(125, 162, 206);
-                        innerLineStartColor = Color.FromRgb(235, 244, 253);
-                        innerLineEndColor = Color.FromRgb(219, 234, 253);
-                        gradientStartColor = Color.FromRgb(220, 235, 252);
-                        gradientEndColor = Color.FromRgb(193, 219, 252);
-
-                    } else {
-                        outerLineColor = Color.FromRgb(217,217,217);
-                        innerLineStartColor = Color.FromRgb(250,250,250);
-                        innerLineEndColor = Color.FromRgb(240,240,240);
-                        gradientStartColor = Color.FromRgb(248,248,248);
-                        gradientEndColor = Color.FromRgb(229,229,229);
-                    }
-
-                    LinearGradientBrush fill = new LinearGradientBrush(gradientStartColor, gradientEndColor, 90);
-
-                    drawingContext.DrawRoundedRectangle(fill, new Pen(new SolidColorBrush(outerLineColor), 1), rowRect, 2, 2);
-                    Rect innerRect = rowRect;
-                    innerRect.Inflate(-1, -1);
-                    drawingContext.DrawRoundedRectangle(null, new Pen(new LinearGradientBrush(innerLineStartColor, innerLineEndColor, 90), 1), innerRect, 2, 2);
-                    break;
-
-                case SelectionStyle.SourceList:
-
-                    Color startColor, endColor;
-
-                    if (IsFocused) {
-                        startColor = Color.FromRgb(15, 94, 217);
-                        endColor = Color.FromRgb(77, 153, 235);
-                    } else {
-                        startColor = Color.FromRgb(107, 107, 107);
-                        endColor = Color.FromRgb(152, 152, 152);
-                    }
-
-                    LinearGradientBrush gradientBrush = new LinearGradientBrush(startColor, endColor, 0);
-
-
-                    drawingContext.DrawRectangle(gradientBrush, null, visibleRowRect);
-                    drawingContext.DrawLine(new Pen(new SolidColorBrush(startColor), 1), new Point(visibleRowRect.X, visibleRowRect.Y), new Point(visibleRowRect.X + visibleRowRect.Width, visibleRowRect.Y));
-
-                    break;
-                case SelectionStyle.Flat:
-                default:
-
-                    if (IsFocused) {
-                        drawingContext.DrawRectangle(SystemColors.HighlightBrush, null, visibleRowRect);
-                    } else {
-                        drawingContext.DrawRectangle(SystemColors.ControlDarkBrush, null, visibleRowRect);
-                    }
-
-                    break;
-            }
-
-        }
-
-        private KNTableColumn[] columns;
-
+        #region Properties
+      
         public double HeaderHeight {
             get { return headerHeight; }
             set {
@@ -1460,7 +1529,6 @@ namespace KNControls {
                 this.DidChangeValueForKey("HeaderHeight");
             }
         }
-
         public Thickness ContentPadding {
             get { return contentPadding; }
             set {
@@ -1472,7 +1540,7 @@ namespace KNControls {
 
         public ScrollBarVisibility VerticalScrollBarVisibility {
             get { return verticalScrollbarVisibility; }
-            set { 
+            set {
                 this.WillChangeValueForKey("VerticalScrollBarVisibility");
                 verticalScrollbarVisibility = value;
                 this.DidChangeValueForKey("VerticalScrollBarVisibility");
@@ -1494,24 +1562,33 @@ namespace KNControls {
 
         public KNTableViewDelegate Delegate { get; set; }
 
-        public double RowHeight { get; set; }
+        public double RowHeight {
+            get { return rowHeight; }
+            set {
+                this.WillChangeValueForKey("RowHeight");
+                rowHeight = value;
+                this.DidChangeValueForKey("RowHeight");
+            }
+        }
 
         public KNTableColumn[] Columns {
             get { return columns; }
             set {
+                this.WillChangeValueForKey("Columns");
                 if (columns != null) {
                     foreach (KNTableColumn col in columns) {
                         col.RemoveObserverFromKeyPath(this, "Width");
                         col.Delegate = null;
                     }
                 }
-                 columns = value;
+                columns = value;
                 if (columns != null) {
                     foreach (KNTableColumn col in columns) {
                         col.AddObserverToKeyPathWithOptions(this, "Width", 0, null);
-                        col.Delegate = this ;
+                        col.Delegate = this;
                     }
                 }
+                this.DidChangeValueForKey("Columns");
             }
         }
 
@@ -1531,18 +1608,145 @@ namespace KNControls {
         public Color AlternateRowColor { get; set; }
 
         public SelectionStyle RowSelectionStyle { get; set; }
-     
+
         public bool DrawHorizontalGridLines { get; set; }
 
         public Color GridColor { get; set; }
 
         public bool DrawVerticalGridLines { get; set; }
 
-        public KNCell CornerCell{ get; set; }
+        public KNCell CornerCell { get; set; }
 
         public bool AllowMultipleSelection { get; set; }
 
 
-        
-    }
+
+        #endregion
+
+        private class KNTableViewRowSelectionLayer : Canvas, KNKVOObserver {
+
+            SelectionStyle style;
+            double contentStart;
+            double contentLength;
+
+            public KNTableViewRowSelectionLayer() {
+                style = KNTableView.SelectionStyle.WindowsExplorer;
+                this.AddObserverToKeyPathWithOptions(this, "SelectionStyle", 0, null);
+                this.AddObserverToKeyPathWithOptions(this, "ContentStart", 0, null);
+                this.AddObserverToKeyPathWithOptions(this, "ContentLength", 0, null);
+                
+            }
+
+            public void ObserveValueForKeyPathOfObject(string keyPath, object obj, Dictionary<string, object> change, object context) {
+                if (keyPath.Equals("SelectionStyle") || keyPath.Equals("ContentStart") || keyPath.Equals("ContentLength")) {
+                    InvalidateVisual();
+                }
+            }
+
+            public SelectionStyle SelectionStyle {
+                get { return style; }
+                set {
+                    if (style != value) {
+                        this.WillChangeValueForKey("SelectionStyle");
+                        style = value;
+                        this.DidChangeValueForKey("SelectionStyle");
+                    }
+                }
+            }
+
+            public double ContentStart {
+                get { return contentStart; }
+                set {
+                    if (contentStart != value) {
+                        this.WillChangeValueForKey("ContentStart");
+                        contentStart = value;
+                        this.DidChangeValueForKey("ContentStart");
+                    }
+                }
+            }
+
+            public double ContentLength {
+                get { return contentLength; }
+                set {
+                    if (contentLength != value) {
+                        this.WillChangeValueForKey("ContentLength");
+                        contentLength = value;
+                        this.DidChangeValueForKey("ContentLength");
+                    }
+                }
+            }
+
+            protected override void OnRender(DrawingContext drawingContext) {
+                base.OnRender(drawingContext);
+
+                Rect rowRect = new Rect(0, 0, Width, Height);
+
+                bool drawFocused = IsFocused || (Parent != null && ((UIElement)Parent).IsFocused);
+
+                switch (style) {
+                    case SelectionStyle.WindowsExplorer:
+
+                        rowRect = new Rect(contentStart, 0, contentLength, Height);
+                        rowRect.Inflate(-.5, -.5);
+
+                        Color outerLineColor, innerLineStartColor, innerLineEndColor, gradientStartColor, gradientEndColor;
+
+                        if (drawFocused) {
+
+                            outerLineColor = Color.FromRgb(125, 162, 206);
+                            innerLineStartColor = Color.FromRgb(235, 244, 253);
+                            innerLineEndColor = Color.FromRgb(219, 234, 253);
+                            gradientStartColor = Color.FromRgb(220, 235, 252);
+                            gradientEndColor = Color.FromRgb(193, 219, 252);
+
+                        } else {
+                            outerLineColor = Color.FromRgb(217, 217, 217);
+                            innerLineStartColor = Color.FromRgb(250, 250, 250);
+                            innerLineEndColor = Color.FromRgb(240, 240, 240);
+                            gradientStartColor = Color.FromRgb(248, 248, 248);
+                            gradientEndColor = Color.FromRgb(229, 229, 229);
+                        }
+
+                        LinearGradientBrush fill = new LinearGradientBrush(gradientStartColor, gradientEndColor, 90);
+
+                        drawingContext.DrawRoundedRectangle(fill, new Pen(new SolidColorBrush(outerLineColor), 1), rowRect, 2, 2);
+                        Rect innerRect = rowRect;
+                        innerRect.Inflate(-1, -1);
+                        drawingContext.DrawRoundedRectangle(null, new Pen(new LinearGradientBrush(innerLineStartColor, innerLineEndColor, 90), 1), innerRect, 2, 2);
+                        break;
+
+                    case SelectionStyle.SourceList:
+
+                        rowRect.Inflate(-.5, -.5);
+                        Color startColor, endColor;
+
+                        if (drawFocused) {
+                            endColor = Color.FromRgb(15, 94, 217);
+                            startColor = Color.FromRgb(77, 153, 235);
+                        } else {
+                            endColor = Color.FromRgb(107, 107, 107);
+                            startColor = Color.FromRgb(152, 152, 152);
+                        }
+
+                        LinearGradientBrush gradientBrush = new LinearGradientBrush(startColor, endColor, 90);
+
+
+                        drawingContext.DrawRectangle(gradientBrush, null, rowRect);
+                        drawingContext.DrawLine(new Pen(new SolidColorBrush(startColor), 1), new Point(rowRect.X, rowRect.Y), new Point(rowRect.X + rowRect.Width, rowRect.Y));
+
+                        break;
+                    case SelectionStyle.Flat:
+                    default:
+
+                        if (drawFocused) {
+                            drawingContext.DrawRectangle(SystemColors.HighlightBrush, null, rowRect);
+                        } else {
+                            drawingContext.DrawRectangle(SystemColors.ControlDarkBrush, null, rowRect);
+                        }
+
+                        break;
+                }
+            }
+        }
+    }  
 }

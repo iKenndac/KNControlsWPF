@@ -8,79 +8,115 @@ using KNFoundation.KNKVC;
 using System.Windows.Media;
 
 namespace KNControls {
-    public class KNCell {
 
-        public enum KNCellState {
-            KNMixedState = -1,
-            KNOffState = 0,
-            KNOnState = 1
+    public interface KNCellContainer {
+        KNCellContainer Control();
+    }
+
+    public enum KNCellState {
+        KNMixedState = -1,
+        KNOffState = 0,
+        KNOnState = 1
+    }
+
+    public interface KNCell {
+        KNCell Copy();
+        void PrepareForRecycling();
+        void PrepareForActivation();
+    }
+
+    public class KNCellDependencyProperty {
+
+        public static readonly DependencyProperty ParentControlProperty;
+        public static readonly DependencyProperty ObjectValueProperty;
+        public static readonly DependencyProperty HighlightedProperty;
+        public static readonly DependencyProperty StateProperty;
+        public static readonly DependencyProperty EnabledProperty;
+
+        static KNCellDependencyProperty() {
+            //register attached dependency property
+            ParentControlProperty = DependencyProperty.RegisterAttached("ParentControl",
+                                                                typeof(KNCellContainer),
+                                                                typeof(KNCellDependencyProperty),
+                                                                new FrameworkPropertyMetadata(null));
+
+            ObjectValueProperty = DependencyProperty.RegisterAttached("ObjectValue",
+                                                                typeof(Object),
+                                                                typeof(KNCellDependencyProperty),
+                                                                new FrameworkPropertyMetadata(null));
+
+            HighlightedProperty = DependencyProperty.RegisterAttached("Highlighted",
+                                                               typeof(bool),
+                                                               typeof(KNCellDependencyProperty),
+                                                               new FrameworkPropertyMetadata(false));
+
+            StateProperty = DependencyProperty.RegisterAttached("State",
+                                                               typeof(KNCellState),
+                                                               typeof(KNCellDependencyProperty),
+                                                               new FrameworkPropertyMetadata(KNCellState.KNOffState));
+
+            EnabledProperty = DependencyProperty.RegisterAttached("Enabled",
+                                                               typeof(bool),
+                                                               typeof(KNCellDependencyProperty),
+                                                               new FrameworkPropertyMetadata(false));
         }
 
-        public interface KNCellContainer {
-            void UpdateCell(KNCell cell);
-            KNCellContainer Control();
+        public static KNCellContainer GetParentControl(DependencyObject obj) {
+            return (KNCellContainer)obj.GetValue(ParentControlProperty);
         }
 
-        private KNCellContainer parent;
-        private Object objectValue;
-        private bool highlighted;
-        private KNCellState state;
-        private bool enabled;
-
-        public virtual void RenderInFrame(DrawingContext context, Rect frame) {
+        public static void SetParentControl(DependencyObject obj, KNCellContainer value) {
+            obj.WillChangeValueForKey("ParentControl");
+            obj.SetValue(ParentControlProperty, value);
+            obj.DidChangeValueForKey("ParentControl");
         }
 
-        public virtual KNCell Copy() {
-            return new KNCell();
+        // --
+
+        public static Object GetObjectValue(DependencyObject obj) {
+            return (Object)obj.GetValue(ObjectValueProperty);
         }
 
-        public KNCellContainer ParentControl {
-            get { return parent; }
-            set {
-                this.WillChangeValueForKey("ParentControl");
-                parent = value;
-                this.DidChangeValueForKey("ParentControl");
-            }
+        public static void SetObjectValue(DependencyObject obj, Object value) {
+            obj.WillChangeValueForKey("ObjectValue");
+            obj.SetValue(ObjectValueProperty, value);
+            obj.DidChangeValueForKey("ObjectValue");
         }
 
-        public virtual Object ObjectValue {
-            get { return objectValue; }
-            set {
+        // --
 
-                if (objectValue != value) {
-                    this.WillChangeValueForKey("ObjectValue");
-                    objectValue = value;
-                    this.DidChangeValueForKey("ObjectValue");
-                }
-            }
+        public static bool GetHighlighted(DependencyObject obj) {
+            return (bool)obj.GetValue(HighlightedProperty);
         }
 
-        public virtual bool Highlighted {
-            get { return highlighted; }
-            set {
-                this.WillChangeValueForKey("Highlighted");
-                highlighted = value;
-                this.DidChangeValueForKey("Highlighted");
-            }
+        public static void SetHighlighted(DependencyObject obj, bool value) {
+            obj.WillChangeValueForKey("Highlighted");
+            obj.SetValue(HighlightedProperty, value);
+            obj.DidChangeValueForKey("Highlighted");
         }
 
-        public virtual KNCellState State {
-            get { return state; }
-            set {
-                this.WillChangeValueForKey("State");
-                state = value;
-                this.DidChangeValueForKey("State");
-            }
+        // --
+
+        public static bool GetEnabled(DependencyObject obj) {
+            return (bool)obj.GetValue(EnabledProperty);
         }
 
-        public virtual bool Enabled {
-            get { return enabled; }
-            set {
-                this.WillChangeValueForKey("Enabled");
-                enabled = value;
-                this.DidChangeValueForKey("Enabled");
-            }
+        public static void SetEnabled(DependencyObject obj, bool value) {
+            obj.WillChangeValueForKey("Enabled");
+            obj.SetValue(EnabledProperty, value);
+            obj.DidChangeValueForKey("Enabled");
         }
 
+        // --
+
+        public static KNCellState GetState(DependencyObject obj) {
+            return (KNCellState)obj.GetValue(StateProperty);
+        }
+
+        public static void SetState(DependencyObject obj, KNCellState value) {
+            obj.WillChangeValueForKey("State");
+            obj.SetValue(StateProperty, value);
+            obj.DidChangeValueForKey("State");
+        }
     }
 }

@@ -42,7 +42,7 @@ namespace KNControls {
     ///     <MyNamespace:CustomControl1/>
     ///
     /// </summary>
-    public class KNProgressWheel : Control, KNCell.KNCellContainer {
+    public class KNProgressWheel : Canvas, KNCellContainer {
         static KNProgressWheel() {
             DefaultStyleKeyProperty.OverrideMetadata(typeof(KNProgressWheel), new FrameworkPropertyMetadata(typeof(KNProgressWheel)));
         }
@@ -52,12 +52,21 @@ namespace KNControls {
         public KNProgressWheel() {
 
             cell = new KNProgressWheelCell();
-            cell.ParentControl = this;
+            
+            KNCellDependencyProperty.SetParentControl(cell, this);
+            
+            cell.PrepareForActivation();
+            this.Children.Add(cell);
         }
 
-        protected override void OnRender(DrawingContext drawingContext) {
-            cell.RenderInFrame(drawingContext, 
-                new Rect(0,0, this.ActualWidth, this.ActualHeight));
+        ~KNProgressWheel() {
+            cell.PrepareForRecycling();
+            cell = null;
+        }
+
+        protected override void OnRenderSizeChanged(SizeChangedInfo sizeInfo) {
+            cell.Width = sizeInfo.NewSize.Width;
+            cell.Height = sizeInfo.NewSize.Height;
         }
 
         ControlSize ControlSize {
@@ -65,11 +74,7 @@ namespace KNControls {
             set { cell.IndicatorSize = value; }
         }
 
-        public void UpdateCell(KNCell cell) {
-            InvalidateVisual();
-        }
-
-        public KNCell.KNCellContainer Control() {
+        public KNCellContainer Control() {
             return this;
         }
     }

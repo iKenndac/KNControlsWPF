@@ -44,12 +44,13 @@ namespace KNControlsTest {
                 new KNTableColumn("test", "Text",new KNTextCell(), null) };
 
             kNTableView1.Columns[0].MinimumWidth = 10;
-            kNTableView1.RowHeight = 40.0;
+            //kNTableView1.RowHeight = 40.0;
             kNTableView1.DataSource = this;
             kNTableView1.Delegate = this;
             kNTableView1.ReloadData();
-
-            kNTableView1.HeaderHeight = 0;
+            kNTableView1.AlternatingRows = true;
+            //kNTableView1.HeaderHeight = 0;
+            kNTableView1.RowSelectionStyle = KNTableView.SelectionStyle.WindowsExplorer;
             kNTableView1.VerticalScrollBarVisibility = KNTableView.ScrollBarVisibility.Automatic;
             kNTableView1.HorizontalScrollBarVisibility = KNTableView.ScrollBarVisibility.Automatic;
 
@@ -63,8 +64,6 @@ namespace KNControlsTest {
 
         public object ObjectForRow(KNTableView table, KNTableColumn column, int rowIndex) {
 
-            //System.Diagnostics.Debug.WriteLine(rowIndex.ToString());
-
             if (column.Identifier.Equals("image")) {
                 return image;
             } else if (column.Identifier.Equals("bool")) {
@@ -77,7 +76,7 @@ namespace KNControlsTest {
         public void CellPerformedAction(KNTableView view, KNTableColumn column, KNActionCell cell, int rowIndex) {
 
             if (column.Identifier.Equals("bool")) {
-                bools[rowIndex] = (bool)cell.ObjectValue;
+                bools[rowIndex] = (bool)KNCellDependencyProperty.GetObjectValue((DependencyObject)cell);
             }
         }
 
