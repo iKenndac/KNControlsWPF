@@ -55,7 +55,10 @@ namespace KNControls {
         // --
 
 
-        public KNTableColumn() {
+        public KNTableColumn() : this("", "", null, null) {
+        }
+
+        public KNTableColumn(string anIdentifier, string aTitle, KNCell aDataCell, KNTableColumnDelegate aDelegate) {
 
             ClipToBounds = true;
 
@@ -64,7 +67,13 @@ namespace KNControls {
 
             sortPriority = SortPriority.NotUsed;
             sortDirection = SortDirection.Ascending;
-            dataCell = new KNTextCell();
+
+            if (aDataCell != null) {
+                dataCell = aDataCell;
+            } else {
+                dataCell = new KNTextCell();
+            }
+
             minSize = 100;
             maxSize = 2000;
             Width = 100;
@@ -72,26 +81,21 @@ namespace KNControls {
             HeaderCell = new KNHeaderCell();
             headerCell.Column = this;
 
+            del = aDelegate;
+            identifier = anIdentifier;
+
             KNActionCellDependencyProperty.SetDelegate((DependencyObject)headerCell, this);
-            KNCellDependencyProperty.SetObjectValue((DependencyObject)headerCell, "Column Title");
+            if (aTitle != null) {
+                KNCellDependencyProperty.SetObjectValue((DependencyObject)headerCell, aTitle);
+            } else {
+                KNCellDependencyProperty.SetObjectValue((DependencyObject)headerCell, "Column Title");
+            }
 
             this.AddObserverToKeyPathWithOptions(this, "VerticalOffset", 0, null);
             this.AddObserverToKeyPathWithOptions(this, "RowHeight", 0, null);
             this.AddObserverToKeyPathWithOptions(this, "DataCell", 0, null);
 
             LayoutCompletely();
-
-        }
-
-        public KNTableColumn(string anIdentifier, string aTitle, KNCell aDataCell, KNTableColumnDelegate aDelegate)
-            : this() {
-
-            identifier = anIdentifier;
-            if (aDataCell != null) {
-                DataCell = aDataCell;
-            }
-            del = aDelegate;
-            KNCellDependencyProperty.SetObjectValue((DependencyObject)headerCell, aTitle);
         }
 
         public void ObserveValueForKeyPathOfObject(string keyPath, object obj, Dictionary<string, object> change, object context) {
@@ -100,11 +104,19 @@ namespace KNControls {
             }
 
             if (keyPath.Equals("DataCell")) {
-                cellCache.Clear();
+                
                 foreach (KNCell cell in activeCells.Values) {
+
+                    if (typeof(KNActionCell).IsAssignableFrom(cell.GetType())) {
+                        KNActionCellDependencyProperty.SetDelegate((DependencyObject)cell, null);
+                    }
+                    KNCellDependencyProperty.SetObjectValue((DependencyObject)cell, null);
+                    Children.Remove((UIElement)cell);
                     cell.PrepareForRecycling();
                 }
                 activeCells.Clear();
+                cellCache.Clear();
+
                 LayoutCompletely();
             }
         }
@@ -140,6 +152,9 @@ namespace KNControls {
                 cellCache.RemoveAt(0);
                 cachedCell.PrepareForActivation();
                 Children.Add((UIElement)cachedCell);
+                if (typeof(KNActionCell).IsAssignableFrom(cachedCell.GetType())) {
+                    KNActionCellDependencyProperty.SetDelegate((DependencyObject)cachedCell, null);
+                }
                 return cachedCell;
             }
 
@@ -238,6 +253,7 @@ namespace KNControls {
             double firstRowOffset = ((firstRow * RowHeight) - VerticalOffset) + ContentPadding.Top + HeaderCell.Height;
             int visibleRowCount = (int)Math.Ceiling((Height - firstRowOffset) / RowHeight);
             int lastRow = firstRow + visibleRowCount;
+            
 
             if (Delegate != null) {
                 int lastAvailableRow = Delegate.RowCountForColumn(this) - 1;
@@ -246,6 +262,10 @@ namespace KNControls {
                 }
             } else {
                 lastRow = 0;
+            }
+
+            if (lastRow < firstRow) {
+                lastRow = firstRow;
             }
 
             visibleRowCount = lastRow - firstRow;

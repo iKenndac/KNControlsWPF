@@ -41,7 +41,8 @@ namespace KNControlsTest {
                 new KNTableColumn("image", "Image",new KNImageCell(), null),
                 new KNTableColumn("bool", "Checkbox",new KNCheckboxCell(), null),
                 new KNTableColumn("test", "Text",new KNTextCell(), null),
-                new KNTableColumn("test", "Text",new KNTextCell(), null) };
+                new KNTableColumn("test", "Text",new KNTextCell(), null),
+            new KNTableColumn("button", "Button", new KNButtonCell(), null) };
 
             kNTableView1.HeaderHeight = 0.0;
             kNTableView1.Columns[0].MinimumWidth = 10;
@@ -78,6 +79,10 @@ namespace KNControlsTest {
 
             if (column.Identifier.Equals("bool")) {
                 bools[rowIndex] = (bool)KNCellDependencyProperty.GetObjectValue((DependencyObject)cell);
+            }
+
+            if (column.Identifier.Equals("button")) {
+                MessageBox.Show("Clicked!");
             }
         }
 

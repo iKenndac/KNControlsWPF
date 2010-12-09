@@ -55,6 +55,7 @@
     <Reference Include="PresentationFramework" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="KNButtonCell.cs" />
     <Compile Include="KNColorExtensions.cs" />
     <Compile Include="TabView\KNTabView.cs" />
     <Compile Include="TabView\KNTabViewItem.cs" />
