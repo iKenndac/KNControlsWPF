@@ -1218,6 +1218,7 @@ namespace KNControls {
                 if (Delegate != null) {
                     if (Delegate.TableViewDelegateShouldShowContextualMenuWithObjectsAtIndexes(this, SelectedRows)) {
                         selectedRowIfNoDrag = -1;
+                        return;
                     }
                 }
             }

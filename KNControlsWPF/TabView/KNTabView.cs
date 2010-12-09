@@ -61,6 +61,7 @@ namespace KNControls {
         private Dictionary<KNTabViewItem, KNTabViewTab> itemToTabCache = new Dictionary<KNTabViewItem, KNTabViewTab>();
         private KNTabViewItem[] items;
         private KNTabViewItem activeItem;
+        private FrameworkElement leftControl;
 
         public double TabHeight {
             get { return tabHeight; }
@@ -68,6 +69,23 @@ namespace KNControls {
                 this.WillChangeValueForKey("TabHeight");
                 tabHeight = value;
                 this.DidChangeValueForKey("TabHeight");
+            }
+        }
+
+        public FrameworkElement LeftControl {
+            get { return leftControl; }
+            set {
+                if (value != leftControl) {
+                    this.WillChangeValueForKey("LeftControl");
+                    if (leftControl != null) {
+                        Children.Remove(leftControl);
+                    }
+                    leftControl = value;
+                    if (leftControl != null) {
+                        Children.Add(leftControl);
+                    }
+                    this.DidChangeValueForKey("LeftControl");
+                }
             }
         }
 
@@ -114,6 +132,7 @@ namespace KNControls {
 
             this.AddObserverToKeyPathWithOptions(this, "TabHeight", 0, null);
             this.AddObserverToKeyPathWithOptions(this, "ActiveItem", 0, null);
+            this.AddObserverToKeyPathWithOptions(this, "LeftControl", 0, null);
             this.AddObserverToKeyPathWithOptions(this,
                 "Items",
                 KNKeyValueObservingOptions.KNKeyValueObservingOptionNew |
@@ -131,7 +150,7 @@ namespace KNControls {
         }
 
         public void ObserveValueForKeyPathOfObject(string keyPath, object obj, Dictionary<string, object> change, object context) {
-            if (keyPath.Equals("TabHeight")) {
+            if (keyPath.Equals("TabHeight") || keyPath.Equals("LeftControl")) {
                 UpdateTabViewLayout();
                 InvalidateArrange();
             } else if (keyPath.Equals("ActiveItem")) {
@@ -194,12 +213,22 @@ namespace KNControls {
                 Canvas.SetTop(contentCanvas, TabHeight - 1.0);
                 Canvas.SetLeft(contentCanvas, 3.0);
 
+                if (LeftControl != null) {
+                    Canvas.SetTop(leftControl, (TabHeight / 2) - (LeftControl.Height / 2) - 1.0);
+                    Canvas.SetLeft(leftControl, 3.0);
+                }
+ 
                 // Tabs
 
                 if (items != null) {
 
                     int currentZIndex = kContentZIndex - 1;
                     double tabOffset = kTabInset + kTabOverlap;
+
+                    if (LeftControl != null) {
+                        tabOffset += LeftControl.Width;
+                    }
+
                     double tabWidth = 0.0;
 
                     foreach (KNTabViewItem item in items) {
@@ -223,8 +252,12 @@ namespace KNControls {
 
                     double extraWidthFromOverlaps = 0.0;
 
+                    if (LeftControl != null) {
+                        extraWidthFromOverlaps -= LeftControl.Width;
+                    }
+
                     if (items.Length > 1) {
-                        extraWidthFromOverlaps = kTabOverlap * (items.Length - 1.0);
+                        extraWidthFromOverlaps += kTabOverlap * (items.Length - 1.0);
                     }
 
                     double allowableWidth = this.ActualWidth - (kTabInset * 2) + extraWidthFromOverlaps;

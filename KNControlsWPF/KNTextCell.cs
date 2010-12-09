@@ -59,8 +59,15 @@ namespace KNControls {
             }
 
             if (keyPath.Equals("ObjectValue")) {
-                textBlock.Text = (string)KNCellDependencyProperty.GetObjectValue(this);
+                object objValue = KNCellDependencyProperty.GetObjectValue(this);
+
+                if (objValue != null) {
+                    textBlock.Text = objValue.ToString();
+                } else {
+                    textBlock.Text = "";
+                }
             }
+
 
         }
 

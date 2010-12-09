@@ -21,7 +21,7 @@ namespace KNControlsTest {
     public partial class TableView : UserControl, KNTableView.KNTableViewDataSource, KNTableView.KNTableViewDelegate {
 
         
-        private string[] elements = { "a", "b", "c", "a", "b", "c", "a", "b", "c", "a", "b", "c" };
+        private string[] elements = { "A String", "b", "c", "a", "b", "c", "a", "b", "c", "a", "b", "c" };
         private bool[] bools = { true, false, true, true, false, true, true, false, true, true, false, true };
         private BitmapImage image;
 
@@ -43,11 +43,11 @@ namespace KNControlsTest {
                 new KNTableColumn("test", "Text",new KNTextCell(), null),
                 new KNTableColumn("test", "Text",new KNTextCell(), null) };
 
+            kNTableView1.HeaderHeight = 0.0;
             kNTableView1.Columns[0].MinimumWidth = 10;
             //kNTableView1.RowHeight = 40.0;
             kNTableView1.DataSource = this;
             kNTableView1.Delegate = this;
-            kNTableView1.ReloadData();
             kNTableView1.AlternatingRows = true;
             //kNTableView1.HeaderHeight = 0;
             kNTableView1.RowSelectionStyle = KNTableView.SelectionStyle.WindowsExplorer;
@@ -55,6 +55,7 @@ namespace KNControlsTest {
             kNTableView1.HorizontalScrollBarVisibility = KNTableView.ScrollBarVisibility.Automatic;
 
             kNTableView1.Focus();
+            kNTableView1.ReloadData();
 
         }
 

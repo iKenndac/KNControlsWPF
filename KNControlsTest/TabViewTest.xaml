@@ -8,7 +8,8 @@
     <Grid>
         <Label Content="Title:" Height="28" HorizontalAlignment="Left" Margin="12,12,0,0" Name="label1" VerticalAlignment="Top" />
         <TextBox Height="23" HorizontalAlignment="Left" Margin="53,14,0,0" Name="TitleField" VerticalAlignment="Top" Width="235" />
-        <my:KNProgressWheel Height="39" HorizontalAlignment="Left" Margin="53,43,0,0" Name="kNProgressWheel1" VerticalAlignment="Top" Width="40"></my:KNProgressWheel>
-        <my:KNProgressWheel Name="kNProgressWheel2" HorizontalAlignment="Left" Margin="53,88,0,187" Width="25" Height="25" />
+        <my:KNProgressWheel Height="39" HorizontalAlignment="Left" Margin="53,65,0,0" Name="kNProgressWheel1" VerticalAlignment="Top" Width="40"></my:KNProgressWheel>
+        <my:KNProgressWheel Name="kNProgressWheel2" HorizontalAlignment="Left" Margin="53,110,0,165" Width="25" Height="25" />
+        <CheckBox Content="Has Button" Height="16" HorizontalAlignment="Left" Margin="53,43,0,0" Name="HasButtonCheckBox" VerticalAlignment="Top" Width="140"  />
     </Grid>
 </UserControl>

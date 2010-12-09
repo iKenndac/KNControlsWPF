@@ -77,6 +77,9 @@ namespace KNControls {
 
             this.AddObserverToKeyPathWithOptions(this, "VerticalOffset", 0, null);
             this.AddObserverToKeyPathWithOptions(this, "RowHeight", 0, null);
+            this.AddObserverToKeyPathWithOptions(this, "DataCell", 0, null);
+
+            LayoutCompletely();
 
         }
 
@@ -85,7 +88,7 @@ namespace KNControls {
 
             identifier = anIdentifier;
             if (aDataCell != null) {
-                dataCell = aDataCell;
+                DataCell = aDataCell;
             }
             del = aDelegate;
             KNCellDependencyProperty.SetObjectValue((DependencyObject)headerCell, aTitle);
@@ -93,6 +96,15 @@ namespace KNControls {
 
         public void ObserveValueForKeyPathOfObject(string keyPath, object obj, Dictionary<string, object> change, object context) {
             if (keyPath.Equals("VerticalOffset") || keyPath.Equals("RowHeight")) {
+                LayoutCompletely();
+            }
+
+            if (keyPath.Equals("DataCell")) {
+                cellCache.Clear();
+                foreach (KNCell cell in activeCells.Values) {
+                    cell.PrepareForRecycling();
+                }
+                activeCells.Clear();
                 LayoutCompletely();
             }
         }
