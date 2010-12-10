@@ -55,7 +55,7 @@ namespace KNControls {
         // --
 
 
-        public KNTableColumn() : this("", "", null, null) {
+        public KNTableColumn() : this(null, null, null, null) {
         }
 
         public KNTableColumn(string anIdentifier, string aTitle, KNCell aDataCell, KNTableColumnDelegate aDelegate) {
@@ -82,7 +82,12 @@ namespace KNControls {
             headerCell.Column = this;
 
             del = aDelegate;
-            identifier = anIdentifier;
+
+            if (anIdentifier != null) {
+                identifier = anIdentifier;
+            } else {
+                identifier = "";
+            }
 
             KNActionCellDependencyProperty.SetDelegate((DependencyObject)headerCell, this);
             if (aTitle != null) {

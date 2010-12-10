@@ -57,6 +57,8 @@
   <ItemGroup>
     <Compile Include="KNButtonCell.cs" />
     <Compile Include="KNColorExtensions.cs" />
+    <Compile Include="KNGradientBar.cs" />
+    <Compile Include="KNTextGradientBar.cs" />
     <Compile Include="TabView\KNTabView.cs" />
     <Compile Include="TabView\KNTabViewItem.cs" />
     <Page Include="Themes\Generic.xaml">

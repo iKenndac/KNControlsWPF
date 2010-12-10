@@ -367,7 +367,7 @@ namespace KNControls {
                 if (RepresentedObject != null) {
 
                     if (RepresentedObject.Icon != null) {
-                        idealWidth += ImageSize().Width + (kContentPadding / 2);
+                        idealWidth += ImageSize().Width + (kContentPadding);
                     }
 
                     if (RepresentedObject.Title != null) {
@@ -612,7 +612,7 @@ namespace KNControls {
 
                         dc.DrawImage(RepresentedObject.Icon, imageRect);
 
-                        contentXOffset += imageSize.Width + (kContentPadding / 2);
+                        contentXOffset += imageSize.Width + (kContentPadding);
 
                     }
 
