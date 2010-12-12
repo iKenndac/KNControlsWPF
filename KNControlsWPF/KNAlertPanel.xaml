@@ -1,0 +1,31 @@
+﻿<Window x:Class="KNControls.KNAlertPanel"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title=" " Height="Auto" Width="439" ResizeMode="NoResize" SizeToContent="Height">
+    <Border Padding="10">
+        <StackPanel Margin="0" Height="Auto">
+            <StackPanel Height="Auto" Name="stackPanel1" Orientation="Horizontal" Width="Auto">
+                <Border Padding="0,0,10,0">
+                    <Image Height="32" Name="IconImage" Stretch="Fill" Width="32" VerticalAlignment="Top" />
+                </Border>
+                <StackPanel Height="Auto" Name="stackPanel2" Width="351">
+                    <Border Padding="0,0,0,5">
+                        <TextBlock Height="Auto" Name="TitleText" Text="Are you sure you want to perform the action indicated by the thing you just clicked?" FontWeight="Normal" FontSize="14" TextWrapping="WrapWithOverflow" Foreground="#FF003399"></TextBlock>
+                    </Border>
+                    <TextBlock Height="Auto" Name="DescriptionText" Text="This is a test of some longer text. Are you sure you want to do the thing you just clicked on?" TextWrapping="WrapWithOverflow" />
+                </StackPanel>
+            </StackPanel>
+            <Border Padding="0,20,0,0">
+            <StackPanel Height="30" Name="ButtonsStack" Orientation="Horizontal" Width="Auto" HorizontalAlignment="Right">
+                    <Border Padding="0,0,20,0">
+                        <Button Content="Don't Save" Height="23" Name="OtherButton" Width="75" Click="OtherButton_Click" />
+                    </Border>
+                    <Border Padding="0,0,5,0">
+                        <Button Content="Cancel" Height="23" Name="AlternateButton" Width="75" IsCancel="True" Click="AlternateButton_Click" />
+                    </Border>
+                    <Button Content="OK" Height="23" Name="DefaultButton" Width="75" IsDefault="True" Click="DefaultButton_Click" />
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </Border>
+</Window>

@@ -11,5 +11,6 @@
         <my:KNProgressWheel Height="39" HorizontalAlignment="Left" Margin="53,65,0,0" Name="kNProgressWheel1" VerticalAlignment="Top" Width="40"></my:KNProgressWheel>
         <my:KNProgressWheel Name="kNProgressWheel2" HorizontalAlignment="Left" Margin="53,110,0,165" Width="25" Height="25" />
         <CheckBox Content="Has Button" Height="16" HorizontalAlignment="Left" Margin="53,43,0,0" Name="HasButtonCheckBox" VerticalAlignment="Top" Width="140"  />
+        <Button Name="AlertPanelButton" Content="Alert Panel" Height="23" HorizontalAlignment="Left" Margin="213,43,0,0" VerticalAlignment="Top" Width="75" />
     </Grid>
 </UserControl>

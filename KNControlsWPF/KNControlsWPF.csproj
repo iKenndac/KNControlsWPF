@@ -55,12 +55,19 @@
     <Reference Include="PresentationFramework" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="KNAlertPanel.xaml.cs">
+      <DependentUpon>KNAlertPanel.xaml</DependentUpon>
+    </Compile>
     <Compile Include="KNButtonCell.cs" />
     <Compile Include="KNColorExtensions.cs" />
     <Compile Include="KNGradientBar.cs" />
     <Compile Include="KNTextGradientBar.cs" />
     <Compile Include="TabView\KNTabView.cs" />
     <Compile Include="TabView\KNTabViewItem.cs" />
+    <Page Include="KNAlertPanel.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Themes\Generic.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
