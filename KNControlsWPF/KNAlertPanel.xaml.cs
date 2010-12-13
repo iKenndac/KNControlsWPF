@@ -59,6 +59,10 @@ namespace KNControls {
 
         public KNAlertPanel() {
             InitializeComponent();
+            try {
+                Title = KNFoundation.KNBundle.MainBundle().DisplayName;
+            } catch (Exception) { }
+            IconImage.Source = KNFoundation.KNBundle.MainBundle().BundleIcon;
         }
 
         protected override void OnClosing(System.ComponentModel.CancelEventArgs e) {

@@ -18,12 +18,12 @@
             <Border Padding="0,20,0,0">
             <StackPanel Height="30" Name="ButtonsStack" Orientation="Horizontal" Width="Auto" HorizontalAlignment="Right">
                     <Border Padding="0,0,20,0">
-                        <Button Content="Don't Save" Height="23" Name="OtherButton" Width="75" Click="OtherButton_Click" />
+                        <Button Content="Don't Save" Height="24" Name="OtherButton" Width="Auto" Click="OtherButton_Click" Padding="20,1" />
                     </Border>
                     <Border Padding="0,0,5,0">
-                        <Button Content="Cancel" Height="23" Name="AlternateButton" Width="75" IsCancel="True" Click="AlternateButton_Click" />
+                        <Button Content="Cancel" Height="24" Name="AlternateButton" Width="Auto" IsCancel="True" Click="AlternateButton_Click" Padding="20,1" />
                     </Border>
-                    <Button Content="OK" Height="23" Name="DefaultButton" Width="75" IsDefault="True" Click="DefaultButton_Click" />
+                    <Button Content="OK" Height="24" Name="DefaultButton" Width="Auto" IsDefault="True" Click="DefaultButton_Click" Padding="20,1" />
                 </StackPanel>
             </Border>
         </StackPanel>

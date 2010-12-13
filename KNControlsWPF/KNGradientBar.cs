@@ -117,10 +117,10 @@ namespace KNControls {
             factory.SetValue(Border.BackgroundProperty, new LinearGradientBrush(tintColor.LighterColorBy(-0.00), tintColor.LighterColorBy(-0.15), 90));
             factory.SetValue(Control.UseLayoutRoundingProperty, true);
 
-            FrameworkElementFactory childFactory = new FrameworkElementFactory(typeof(StackPanel));
+            FrameworkElementFactory childFactory = new FrameworkElementFactory(typeof(DockPanel));
             childFactory.SetValue(ContentPresenter.MarginProperty, new Thickness(kMinimumPadding / 2, 2.0, kMinimumPadding / 2, 2.0));
-            childFactory.SetValue(StackPanel.OrientationProperty, Orientation.Horizontal);
-
+            //childFactory.SetValue(StackPanel.OrientationProperty, Orientation.Horizontal);
+            
             FrameworkElementFactory imageViewFactory = new FrameworkElementFactory(typeof(Image));
             imageViewFactory.Name = "Image";
             imageViewFactory.SetValue(Control.NameProperty, "Image");
@@ -129,6 +129,7 @@ namespace KNControls {
             imageViewFactory.SetValue(Image.StretchProperty, Stretch.None);
             imageViewFactory.SetValue(Image.HorizontalAlignmentProperty, HorizontalAlignment.Center);
             imageViewFactory.SetValue(Image.VerticalAlignmentProperty, VerticalAlignment.Center);
+            imageViewFactory.SetValue(DockPanel.DockProperty, Dock.Left);
 
             Binding imageBinding = new Binding();
             imageBinding.Path = new PropertyPath(ImageDependencyProperty.ImageProperty);
@@ -142,6 +143,7 @@ namespace KNControls {
             contentViewFactory.SetValue(ContentPresenter.VerticalAlignmentProperty, VerticalAlignment.Center);
             contentViewFactory.SetValue(ContentPresenter.HorizontalAlignmentProperty, HorizontalAlignment.Center);
             contentViewFactory.SetValue(ContentPresenter.EffectProperty, GradientBarTextEffect());
+            
             if (!shouldHaveDropdownIndicator) {
                 contentViewFactory.SetValue(ContentPresenter.MarginProperty, new Thickness(0, 0, kMinimumPadding / 2, 0));
             }
@@ -149,7 +151,9 @@ namespace KNControls {
             FrameworkElementFactory menuIndicatorFactory = new FrameworkElementFactory(typeof(Image));
             menuIndicatorFactory.SetValue(Image.StretchProperty, Stretch.None);
             menuIndicatorFactory.SetValue(Image.SourceProperty, DropDownTriangle());
-            menuIndicatorFactory.SetValue(Image.MarginProperty, new Thickness(kMinimumPadding / 4, 0.0, 0.0, 0.0));
+            menuIndicatorFactory.SetValue(ContentPresenter.HorizontalAlignmentProperty, HorizontalAlignment.Right);
+            menuIndicatorFactory.SetValue(Image.MarginProperty, new Thickness(0.0, 0.0, kMinimumPadding / 4, 0.0));
+            menuIndicatorFactory.SetValue(DockPanel.DockProperty, Dock.Right);
 
             childFactory.AppendChild(imageViewFactory);
             childFactory.AppendChild(contentViewFactory);
@@ -159,7 +163,7 @@ namespace KNControls {
             }
 
             factory.AppendChild(childFactory);
-
+            
             template.VisualTree = factory;
 
             // Triggers

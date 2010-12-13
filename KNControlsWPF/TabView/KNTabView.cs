@@ -13,6 +13,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 using KNFoundation.KNKVC;
+using KNFoundation;
 using System.Threading;
 
 namespace KNControls {
@@ -45,6 +46,31 @@ namespace KNControls {
     ///     <MyNamespace:KNTabView/>
     ///
     /// </summary>
+    /// 
+
+    public class KNTabViewController : KNViewController {
+
+        private KNTabView tabView;
+
+        public KNTabViewController()
+            : base() {
+
+                View = new KNTabView();
+                View.ParentViewController = this;
+
+        }
+
+        public new KNTabView View {
+            get { return tabView; }
+            set {
+                this.WillChangeValueForKey("View");
+                tabView = value;
+                this.DidChangeValueForKey("View");
+            }
+        }
+
+    }
+
     public class KNTabView : Canvas, KNKVOObserver {
        
         protected static Color kDefaultTintColor = Color.FromRgb(245, 245, 245);
@@ -62,6 +88,16 @@ namespace KNControls {
         private KNTabViewItem[] items;
         private KNTabViewItem activeItem;
         private FrameworkElement leftControl;
+        private KNViewController parentViewController;
+
+        public KNViewController ParentViewController {
+            get { return parentViewController; }
+            set {
+                this.WillChangeValueForKey("ParentViewController");
+                parentViewController = value;
+                this.DidChangeValueForKey("ParentViewController");
+            }
+        }
 
         public double TabHeight {
             get { return tabHeight; }
@@ -295,6 +331,9 @@ namespace KNControls {
             KNTabViewTab tab = new KNTabViewTab();
             this.Children.Add(tab);
             tab.RepresentedObject = item;
+            if (tab.RepresentedObject.ViewController != null) {
+                tab.RepresentedObject.ViewController.ParentViewController = ParentViewController;
+            }
             tab.TabWasClicked += TabClicked;
             tab.TabMayWantNewSize += TabResized;
             itemToTabCache.Add(item, tab);
@@ -306,6 +345,9 @@ namespace KNControls {
 
                 KNTabViewTab tab = itemToTabCache[item];
                 this.Children.Remove(tab);
+                if (tab.RepresentedObject.ViewController != null) {
+                    tab.RepresentedObject.ViewController.ParentViewController = null;
+                }
                 tab.RepresentedObject = null;
                 itemToTabCache.Remove(item);
             }
