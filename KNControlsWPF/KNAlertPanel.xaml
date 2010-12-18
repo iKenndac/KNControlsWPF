@@ -1,7 +1,7 @@
 ﻿<Window x:Class="KNControls.KNAlertPanel"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title=" " Height="Auto" Width="439" ResizeMode="NoResize" SizeToContent="Height">
+        Title=" " Height="Auto" Width="439" ResizeMode="NoResize" SizeToContent="Height" WindowStartupLocation="CenterOwner">
     <Border Padding="10">
         <StackPanel Margin="0" Height="Auto">
             <StackPanel Height="Auto" Name="stackPanel1" Orientation="Horizontal" Width="Auto">

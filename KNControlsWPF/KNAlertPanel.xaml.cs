@@ -79,6 +79,13 @@ namespace KNControls {
 
         }
 
+        public int ShowInWindow(Window parentWindow) {
+
+            Owner = parentWindow;
+            return ShowDialog();
+
+        }
+
         private void DefaultButton_Click(object sender, RoutedEventArgs e) {
             returnCode = KNAlertPanelDefaultReturn;
             Close();
