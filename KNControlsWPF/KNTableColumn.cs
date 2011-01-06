@@ -277,19 +277,21 @@ namespace KNControls {
 
             PrepareForNewRowRange(firstRow, lastRow);
 
-            for (int currentVisibleRowIndex = 0; currentVisibleRowIndex <= visibleRowCount; currentVisibleRowIndex++) {
+            if (visibleRowCount > 0) {
+                for (int currentVisibleRowIndex = 0; currentVisibleRowIndex <= visibleRowCount; currentVisibleRowIndex++) {
 
-                int currentActualRow = firstRow + currentVisibleRowIndex;
+                    int currentActualRow = firstRow + currentVisibleRowIndex;
 
-                KNCell cell = CellForRow(currentActualRow);
-                Canvas.SetTop((UIElement)cell, firstRowOffset + (currentVisibleRowIndex * RowHeight));
-                ((FrameworkElement)cell).Height = RowHeight;
-                ((FrameworkElement)cell).Width = Width;
+                    KNCell cell = CellForRow(currentActualRow);
+                    Canvas.SetTop((UIElement)cell, firstRowOffset + (currentVisibleRowIndex * RowHeight));
+                    ((FrameworkElement)cell).Height = RowHeight;
+                    ((FrameworkElement)cell).Width = Width;
 
-                if (Delegate != null) {
-                    KNCellDependencyProperty.SetObjectValue((DependencyObject)cell, Delegate.ObjectForRow(currentActualRow, this));
+                    if (Delegate != null) {
+                        KNCellDependencyProperty.SetObjectValue((DependencyObject)cell, Delegate.ObjectForRow(currentActualRow, this));
+                    }
                 }
-            } 
+            }
         }
 
         public new double Width {

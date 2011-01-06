@@ -61,7 +61,7 @@ namespace KNControlsTest {
         }
 
         public int NumberOfItemsInTableView(KNTableView table) {
-            return elements.Length;
+            return 0; // elements.Length;
         }
 
         public object ObjectForRow(KNTableView table, KNTableColumn column, int rowIndex) {
